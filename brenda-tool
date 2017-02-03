@@ -53,7 +53,7 @@ Optional config vars:
   AMI_ID : Amazon ID of render-farm AMI, to cause tool to filter all node
            queries except for those running this AMI (optional).  This is
            useful if you have other EC2 instances running in your AWS
-           account that are not associated with Brenda.%s
+           account that are not associated with Brenda.
   AWS_USER : username when accessing AWS node (optional).
   TOOL_THREADS : max number of simultaneous threads to use when querying
                  multiple render farm instances (default=64).
@@ -78,7 +78,7 @@ Examples:
   billable hour of operation.  64 instances running over the next hour would
   be overkill to finish the render job, so you want to scale back the number
   of instances to 16:
-    $ brenda-tool prune 16""" % (sys.argv[0], version.VERSION, aws.get_default_ami_with_fmt("\n           default=%s"))
+    $ brenda-tool prune 16""" % (sys.argv[0], version.VERSION)
     parser = optparse.OptionParser(usage)
     parser.disable_interspersed_args()
 
@@ -94,7 +94,7 @@ Examples:
     parser.add_option("-H", "--hosts-file", dest="hosts_file",
                       help="ssh/rsync on hosts listed in file")
     parser.add_option("-a", "--ami", dest="ami",
-                      help="AMI ID of instances to match on, overrides config variable AMI_ID"+aws.get_default_ami_with_fmt(", default=%s"))
+                      help="AMI ID to use when starting EC2 instances, overrides config variable AMI_ID")
     parser.add_option("-t", "--threshold", type="int", dest="threshold", default=0,
                       help="Match only on instances whose uptime is > n minutes after the hour, default=%default")
     parser.add_option("", "--imatch", dest="imatch",

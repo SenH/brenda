@@ -19,7 +19,6 @@ import boto, boto.sqs, boto.s3, boto.ec2
 import boto.utils
 from brenda import utils
 from brenda.error import ValueErrorRetry
-from brenda.ami import AMI_ID
 
 def aws_creds(conf):
     try:
@@ -204,7 +203,7 @@ def filter_instances(opts, conf, hostset=None):
         return (ut / 60) % 60 >= opts.threshold
 
     now = time.time()
-    ami = utils.get_opt(opts.ami, conf, 'AMI_ID', default=AMI_ID)
+    ami = utils.get_opt(opts.ami, conf, 'AMI_ID')
     if opts.imatch:
         imatch = frozenset(opts.imatch.split(','))
     else:
@@ -277,12 +276,6 @@ def get_adaptive_ssh_identity_fn(opts, conf):
         if not os.path.exists(fn):
             raise ValueError("No ssh private key exists, did you run 'brenda-run init'?")
     return fn
-
-def get_default_ami_with_fmt(fmt):
-    if AMI_ID:
-        return fmt % (AMI_ID,)
-    else:
-        return ""
 
 def parse_ebs_url(key):
     if key and key.startswith("ebs://"):

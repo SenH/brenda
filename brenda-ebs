@@ -34,8 +34,8 @@ Required config vars:
   AWS_SECRET_KEY : Amazon Web Services secret key.
   SSH_PUBKEY     : SSH public key that created EC2 instances will recognize
                    as an authorized key.  Defaults to $HOME/.ssh/id_rsa.pub
+  AMI_ID : Amazon ID of AMI that will be started.
 Optional config vars:
-  AMI_ID : Amazon ID of AMI that will be started%s.
   EC2_REGION : EC2 region name, defaults to US standard (optional).
   SSH_KEY_NAME : EC2 ssh key name, default='brenda'
   SECURITY_GROUP : EC2 security group, default='brenda'
@@ -43,7 +43,7 @@ Optional config vars:
   EBS_MANAGE_AVAILABILITY_ZONE : EC2 availability zone.
 Examples:
   Start a new EC2 instance attached to a newly created 25GB EBS volume:
-    brenda-ebs -s 25 new""" % (sys.argv[0], version.VERSION, aws.get_default_ami_with_fmt(" (default=%s)"))
+    brenda-ebs -s 25 new""" % (sys.argv[0], version.VERSION)
     parser = optparse.OptionParser(usage)
     parser.disable_interspersed_args()
 
@@ -53,7 +53,7 @@ Examples:
                       help="Configuration file (default: %default)")
 
     parser.add_option("-a", "--ami", dest="ami",
-                      help="AMI ID to use when starting EC2 instances, overrides config variable AMI_ID"+aws.get_default_ami_with_fmt(", default=%s"))
+                      help="AMI ID to use when starting EC2 instances, overrides config variable AMI_ID")
     parser.add_option("-s", "--size", type="int", dest="size", default=1,
                       help="Size of new EBS volume in GB, default=%default")
     parser.add_option("-S", "--snapshot", dest="snapshot",

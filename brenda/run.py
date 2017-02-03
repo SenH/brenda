@@ -16,10 +16,9 @@
 
 import os, time
 from brenda import aws, utils
-from brenda.ami import AMI_ID
 
 def demand(opts, conf):
-    ami_id = utils.get_opt(opts.ami, conf, 'AMI_ID', default=AMI_ID, must_exist=True)
+    ami_id = utils.get_opt(opts.ami, conf, 'AMI_ID', must_exist=True)
     itype = brenda_instance_type(opts, conf)
     snapshots = aws.get_snapshots(conf)
     bdm, snap_description, istore_dev = aws.blk_dev_map(opts, conf, itype, snapshots)
@@ -57,7 +56,7 @@ def demand(opts, conf):
         print reservation
 
 def spot(opts, conf):
-    ami_id = utils.get_opt(opts.ami, conf, 'AMI_ID', default=AMI_ID, must_exist=True)
+    ami_id = utils.get_opt(opts.ami, conf, 'AMI_ID', must_exist=True)
     price = utils.get_opt(opts.price, conf, 'BID_PRICE', must_exist=True)
     reqtype = 'persistent' if opts.persistent else 'one-time'
     itype = brenda_instance_type(opts, conf)
