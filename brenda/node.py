@@ -64,12 +64,12 @@ def s3_push_process(opts, args, conf, outdir):
 
 def run_tasks(opts, args, conf):
     def write_done_file():
-        with open("DONE", "w") as f:
+        with open(os.path.join(work_dir, "DONE"), "w") as f:
             f.write(aws.get_done(opts, conf)+'\n')
 
     def read_done_file():
         try:
-            with open('DONE') as f:
+            with open(os.path.join(work_dir, "DONE")) as f:
                 ret = f.readline().strip()
         except:
             ret = 'exit'
@@ -79,10 +79,10 @@ def run_tasks(opts, args, conf):
     def task_complete_accounting(task_count):
         # update some info files if we are running in daemon mode
         # number of tasks we have completed so far
-        utils.write_atomic('task_count', "%d\n" % (task_count,))
+        utils.write_atomic(os.path.join(work_dir, 'task_count'), "%d\n" % (task_count,))
 
         # timestamp of completion of last task
-        utils.write_atomic('task_last', "%d\n" % (time.time(),))
+        utils.write_atomic(os.path.join(work_dir, 'task_last'), "%d\n" % (time.time(),))
 
     def signal_handler(signal, frame):
         print "******* SIGNAL %r, exiting" % (signal,)
@@ -302,8 +302,8 @@ def run_tasks(opts, args, conf):
     aws.get_s3_output_bucket(conf)
 
     # file cleanup
-    utils.rm('task_count')
-    utils.rm('task_last')
+    utils.rm(os.path.join(work_dir, 'task_count'))
+    utils.rm(os.path.join(work_dir, 'task_last'))
 
     # create Blender temporary directory
     tmp_dir = os.path.join(work_dir, 'tmp')
