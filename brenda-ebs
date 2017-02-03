@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Brenda -- Blender render tool for Amazon Web Services
+# Brenda -- Render farm tool for Amazon Web Services
 # Copyright (C) 2013 James Yonan <james@openvpn.net>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,7 @@ usage: %s [options] new
 Version:
   Brenda %s
 Synopsis:
-  Manage EBS volumes used to store Blender projects and assets.
+  Manage EBS volumes used to store projects and assets.
 Commands:
   new : Start an EC2 instance attached to a newly created EBS volume.
   existing : Start an EC2 instance attached to an existing EBS volume.

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Brenda -- Blender render tool for Amazon Web Services
+# Brenda -- Render farm tool for Amazon Web Services
 # Copyright (C) 2013 James Yonan <james@openvpn.net>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -41,18 +41,6 @@ Optional config vars:
                        SQS will return a task to the queue if the brenda-node
                        worker doesn't acknowledge or complete the pending
                        task over this period of time.
-Sample task script (single frame render):
-  blender -b *.blend -F PNG -o $OUTDIR/frame_###### -s $START -e $END -j $STEP -t 0 -a
-Sample task script (subframe render):
-  cat >subframe.py <<EOF
-  import bpy
-  bpy.context.scene.render.border_min_x = $SF_MIN_X
-  bpy.context.scene.render.border_max_x = $SF_MAX_X
-  bpy.context.scene.render.border_min_y = $SF_MIN_Y
-  bpy.context.scene.render.border_max_y = $SF_MAX_Y
-  bpy.context.scene.render.use_border = True
-  EOF
-  blender -b *.blend -P subframe.py -F PNG -o $OUTDIR/frame_######_X-$SF_MIN_X-$SF_MAX_X-Y-$SF_MIN_Y-$SF_MAX_Y -s $START -e $END -j $STEP -t 0 -a
 Examples:
   Using a task script such as "single frame render" above, push a separate
   task to render each frame from 1 to 1440:
@@ -76,8 +64,8 @@ Examples:
     parser.add_option("-d", "--dry-run", action="store_true", dest="dry_run",
                       help="Show tasks that would be pushed to work queue, but don't actually push anything")
 
-    parser.add_option("-T", "--task-script", dest="task_script",
-                      help="Script template file for a single task.  Macros: $OUTDIR: render output directory, $START, $END, $STEP: frame parameters.")
+    parser.add_option("-T", "--task-script", dest="task_script", metavar="FILE",
+                      help="Script template file for a single task.")
 
     parser.add_option("-s", "--start", type="int", dest="start", default=1,
                       help="Start frame to render, default=%default")

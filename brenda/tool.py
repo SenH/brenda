@@ -1,4 +1,4 @@
-# Brenda -- Blender render tool for Amazon Web Services
+# Brenda -- Render farm tool for Amazon Web Services
 # Copyright (C) 2013 James Yonan <james@openvpn.net>
 #
 # This program is free software: you can redistribute it and/or modify

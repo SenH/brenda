@@ -1,4 +1,4 @@
-# Brenda -- Blender render tool for Amazon Web Services
+# Brenda -- Render farm tool for Amazon Web Services
 # Copyright (C) 2013 James Yonan <james@openvpn.net>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -289,7 +289,7 @@ def parse_ebs_url(key):
         return key[6:]
 
 def project_ebs_snapshot(conf):
-    return parse_ebs_url(conf.get('BLENDER_PROJECT'))
+    return parse_ebs_url(conf.get('RENDER_PROJECT'))
 
 def translate_snapshot_name(conf, snap_name, snapshots=None):
     if snap_name:

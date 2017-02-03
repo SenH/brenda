@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Brenda -- Blender render tool for Amazon Web Services
+# Brenda -- Render farm tool for Amazon Web Services
 # Copyright (C) 2013 James Yonan <james@openvpn.net>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -45,11 +45,11 @@ Required config vars:
   AWS_SECRET_KEY : Amazon Web Services secret key.
   SSH_PUBKEY     : SSH public key that created EC2 instances will recognize
                    as an authorized key.  Defaults to $HOME/.ssh/id_rsa.pub
-  BLENDER_PROJECT : directory containing .blend file and all supporting files
-                    for render.  May be a compressed file on S3 in zip format
+  RENDER_PROJECT : Directory containing render project and assets.
+                    May be a compressed file on S3 in zip format
                     or any format supported by tar, i.e.
                     s3://BUCKET/myproject.zip, or local directory on render
-                    farm node i.e. file:///my/local/blender/project
+                    farm node i.e. file:///my/local/render/project
                     May also be an EBS snapshot, i.e. ebs://snap-66c5dd62
                     or ebs://my-snapshot-name
   WORK_QUEUE : name of SQS queue (e.g. sqs://QUEUE) containing render
@@ -67,14 +67,14 @@ Optional config vars:
   SSH_KEY_NAME : EC2 ssh key name, default='brenda'
   SECURITY_GROUP : EC2 security group, default='brenda'
   ADDITIONAL_EBS_0, ADDITIONAL_EBS_1, ... : Additional EBS snapshots that
-    should be attached to the render-farm instance before Blender is
+    should be attached to the render-farm instance before render task is
     started. EBS snapshots can be up to 1 TB in size and can be used to
     provide assets and additional data to the render process.
     Syntax: ADDITIONAL_EBS_0="ebs://MY_SNAPSHOT,DIRECTORY" will mount
-    MY_SNAPSHOT in DIRECTORY (relative to Blender project location).
+    MY_SNAPSHOT in DIRECTORY (relative to render project location).
     Example: ADDITIONAL_EBS_0="ebs://snap-ab957cc2,freebase" will
     mount the EBS snapshot snap-ab957cc2 in a directory called
-    freebase in the same directory as the Blender project.
+    freebase in the same directory as the render project.
   USE_ISTORE : boolean (0|1) that controls whether render-farm work
                dir will be placed on an EC2 instance store volume
                (/mnt/brenda, override with WORK_DIR).

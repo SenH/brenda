@@ -1,4 +1,4 @@
-# Brenda -- Blender render tool for Amazon Web Services
+# Brenda -- Render farm tool for Amazon Web Services
 # Copyright (C) 2013 James Yonan <james@openvpn.net>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -251,7 +251,7 @@ cd "$B"
     keys = [
         'AWS_ACCESS_KEY',
         'AWS_SECRET_KEY',
-        'BLENDER_PROJECT',
+        'RENDER_PROJECT',
         'WORK_QUEUE',
         'RENDER_OUTPUT'
         ]
@@ -266,7 +266,7 @@ cd "$B"
         "N_RETRIES",
         "ERROR_PAUSE",
         "RESET_PERIOD",
-        "BLENDER_PROJECT_ALWAYS_REFETCH",
+        "RENDER_PROJECT_ALWAYS_REFETCH",
         "WORK_DIR",
         "SHUTDOWN",
         "DONE"

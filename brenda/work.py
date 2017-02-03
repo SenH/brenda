@@ -1,4 +1,4 @@
-# Brenda -- Blender render tool for Amazon Web Services
+# Brenda -- Render farm tool for Amazon Web Services
 # Copyright (C) 2013 James Yonan <james@openvpn.net>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -50,7 +50,6 @@ def push(opts, args, conf):
         end = min(fnum + opts.task_size - 1, opts.end)
         step = 1
         for key, value in (
-              ("$FRAME", "-s %d -e %d -j %d" % (start, end, step)),
               ("$START", "%d" % (start,)),
               ("$END", "%d" % (end,)),
               ("$STEP", "%d" % (step,))
