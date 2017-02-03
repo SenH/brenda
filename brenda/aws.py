@@ -100,7 +100,7 @@ def put_s3_file(bucktup, path, s3name):
     """
     k = boto.s3.key.Key(bucktup[0])
     k.key = bucktup[1][1] + s3name
-    k.set_contents_from_filename(path, reduced_redundancy=True)
+    k.set_contents_from_filename(path)
 
 def format_s3_url(bucktup, s3name):
     """
