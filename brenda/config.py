@@ -46,6 +46,9 @@ class Config(dict):
 
     def _process_line(self, line):
         line = line.strip()
+        # skip comments
+        if line.startswith("#"):
+            return
         m = re.match(self.re_key_value, line)
         if m:
             k, v = m.groups()
