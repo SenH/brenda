@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, time, datetime, calendar, urllib2
+import os, sys, time, datetime, calendar, urllib2, logging
 import boto, boto.sqs, boto.s3, boto.ec2
 import boto.utils
 from brenda import utils
@@ -22,10 +22,12 @@ from brenda.error import ValueErrorRetry
 from brenda.ami import AMI_ID
 
 def aws_creds(conf):
-    return {
-        'aws_access_key_id' : conf['AWS_ACCESS_KEY'],
-        'aws_secret_access_key' : conf['AWS_SECRET_KEY'],
-        }
+    try:
+        return {'aws_access_key_id' : conf['AWS_ACCESS_KEY'],
+                'aws_secret_access_key' : conf['AWS_SECRET_KEY']}
+    except KeyError:
+        logging.error('AWS_ACCESS_KEY or AWS_SECRET_KEY not defined in configuration')
+        sys.exit(1)
 
 def get_s3_conn(conf):
     region = conf.get('S3_REGION')
