@@ -149,10 +149,11 @@ def run_tasks(opts, args, conf):
                 task.retcode = None
                 task.outdir = None
                 task.id = 0
+                task.script_name = None
 
                 # Get a task from the SQS work queue.  This is normally
                 # a short script that renders one or more frames.
-                task.msg = q.read()
+                task.msg = q.read(message_attributes=['All'])
 
                 # output some debug info
                 logging.debug('Reading work queue')
@@ -167,12 +168,13 @@ def run_tasks(opts, args, conf):
                     # assign an ID to task
                     local.task_id_counter += 1
                     task.id = local.task_id_counter
+                    task.script_name = task.msg.message_attributes['script_name']['string_value']
 
                     # register active task
                     local.task_active = task
 
                     # create output directory
-                    task.outdir = os.path.join(work_dir, "brenda-outdir%d.tmp" % (task.id,))
+                    task.outdir = os.path.join(work_dir, "{}_out_{}".format(task.script_name, task.id))
                     utils.rmtree(task.outdir)
                     utils.mkdir(task.outdir)
 
@@ -185,8 +187,7 @@ def run_tasks(opts, args, conf):
                     # cd to project directory, where we will run render task from
                     with utils.Cd(proj_dir) as cd:
                         # write script file and make it executable
-                        # TODO Set original task script filename via SQS attribute
-                        script_fn = "./brenda-task-script"
+                        script_fn = "./{}".format(task.script_name)
                         with open(script_fn, 'w') as f:
                             f.write(script)
                         st = os.stat(script_fn)
@@ -197,7 +198,7 @@ def run_tasks(opts, args, conf):
                         logging.debug(script.replace("\n"," "))
                         task.proc = Subprocess([script_fn])
 
-                    logging.info('Running render task #%d', local.task_active.id)
+                    logging.info('Running render task: %s #%d', local.task_active.script_name, local.task_active.id)
                     logging.debug(local.task_active.__dict__)
 
                 # Wait for active and S3-push tasks to complete,
@@ -238,10 +239,10 @@ def run_tasks(opts, args, conf):
                                         task.msg = None
                                         local.task_count += 1
                                         task_complete_accounting(local.task_count)
-
+ 
                                     # active task completed?
                                     if name == 'active':
-                                        logging.info('Finished render task #%d', task.id)
+                                        logging.info('Finished render task: %s #%d', task.script_name,task.id)
 
                             # tell SQS that we are still working on the task
                             if reassert and task.proc is not None:

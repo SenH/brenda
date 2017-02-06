@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import random, logging
+import os, random, logging
 from brenda import aws
 
 def subframe_iterator_defined(opts):
@@ -85,7 +85,8 @@ def push(opts, args, conf):
         logging.info("Creating task %d: %s", i, task.replace("\n"," "))
         i = (i + 1)
         if q is not None:
-            aws.write_sqs_queue(task, q)
+            attr = {"script_name": {"data_type": "String", "string_value": os.path.basename(opts.task_script)}}
+            aws.write_sqs_queue(task, q, attr)
 
 def status(opts, args, conf):
     q = aws.get_sqs_queue(conf)
