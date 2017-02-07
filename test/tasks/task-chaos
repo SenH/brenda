@@ -1,0 +1,2 @@
+#!/opt/local/bin/bash
+python chaos.py -o $OUTDIR/frame_###### -s $START -e $END -j $STEP

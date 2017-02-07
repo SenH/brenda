@@ -1,5 +1,5 @@
 #!/opt/local/bin/bash
-# Push more work (subframes) to test brenda-node while in poll mode.
+# Push chaos task to test brenda-node while in poll mode.
 set -eu
 
 declare -r SCRIPTPATH=$(realpath "$0")
@@ -7,4 +7,4 @@ declare -r SCRIPTDIR=$(dirname "$SCRIPTPATH")
 declare -r ROOT="$(realpath "$SCRIPTDIR/../..")"
 
 export BRENDA_CONFIG="$ROOT/test/brenda.conf"
-"$ROOT/brenda-work" --start 21 --end 30 -X 2 -Y 2 --task-script "$ROOT/test/tasks/task-persubframe" push
+"$ROOT/brenda-work" --end 4 --task-script "$ROOT/test/tasks/task-chaos" push

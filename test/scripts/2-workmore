@@ -8,4 +8,4 @@ declare -r SCRIPTDIR=$(dirname "$SCRIPTPATH")
 declare -r ROOT="$(realpath "$SCRIPTDIR/../..")"
 
 export BRENDA_CONFIG="$ROOT/test/brenda.conf"
-"$ROOT/brenda-work" --start 11 --end 20 --task-size 2 --task-script "$ROOT/test/task-script" push
+"$ROOT/brenda-work" --start 11 --end 20 --task-size 2 --task-script "$ROOT/test/tasks/task-perframe" push
