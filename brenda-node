@@ -17,7 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys, optparse
-from brenda import config, daemon, node, version
+from brenda import config, daemon, node, version, utils
 
 def main():
     usage = """\
@@ -83,9 +83,13 @@ Optional config vars:
                       help="Configuration file (by default read from stdin)")
     parser.add_option("-D", "--daemon", action="store_true", dest="daemon",
                       help="Run as a daemon")
-    parser.add_option("-l", "--log", dest="log", default="log",
-                      help="Log to file when running as a daemon, default=%default")
-    parser.add_option("-p", "--pidfile", dest="pidfile", default="brenda.pid",
+    parser.add_option("-l", "--logfile", dest="logfile", metavar="FILE",
+                      help="Save log to file")
+    parser.add_option("-v", "--loglevel", dest="loglevel",
+                      help="Level of events to log (default: INFO)")
+    parser.add_option("-L", "--logdaemon", dest="logdaemon", metavar="FILE",
+                      help="Save daemon log to file")
+    parser.add_option("-p", "--pidfile", dest="pidfile", default="brenda.pid", metavar="FILE",
                       help="Write process ID to this file when running as a daemon, default=%default")
     parser.add_option("-S", "--shutdown", action="store_true", dest="shutdown",
                       help="Shut down the instance on completion of all tasks")
@@ -100,11 +104,13 @@ Optional config vars:
     # Get configuration
     conf = config.Config(opts.config, 'BRENDA_', default_stdin=True)
     #print "CONFIG", conf
+    utils.setup_logger(opts, conf)
 
     # dispatch
     func = lambda : node.run_tasks(opts, args, conf)
     if opts.daemon:
-        i = daemon.Instance(func, opts.log, opts.pidfile)
+        logdaemon = utils.get_opt(opts.logdaemon, conf, 'LOG_DAEMON', '/dev/null')
+        i = daemon.Instance(func, logdaemon, opts.pidfile)
         i.start()
     else:
         func()

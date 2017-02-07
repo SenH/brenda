@@ -14,40 +14,40 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, subprocess, shutil
+import os, subprocess, shutil, logging
 
 def system(cmd, ignore_errors=False):
-    print "***", cmd
+    logging.info('Execute command: %s', cmd)
     succeed = 0
     ret = subprocess.call(cmd)
     if not ignore_errors and ret != succeed:
         raise ValueError("command failed with status %r (expected %r)" % (ret, succeed))
 
 def rmtree(dir):
-    print "RMTREE", dir
+    logging.debug('Delete folder: %s', dir)
     shutil.rmtree(dir, ignore_errors=True)
 
 def rm(file):
-    print "RM", file
+    logging.debug('Delete file: %s', file)
     try:
         os.remove(file)
     except:
         pass
 
 def mkdir(dir):
-    print "MKDIR", dir
+    logging.debug('Create folder: %s', dir)
     os.mkdir(dir)
 
 def makedirs(dir):
-    print "MAKEDIRS", dir
+    logging.debug('Create folders: %s', dir)
     os.makedirs(dir)
 
 def mv(src, dest):
-    print "MV %s %s" % (src, dest)
+    logging.debug('Move %s to %s', src, dest)
     shutil.move(src, dest)
 
 def shutdown():
-    print "SHUTDOWN"
+    logging.info('Shutdown system')
     system(["/sbin/shutdown", "-h", "0"])
 
 def write_atomic(path, data):
@@ -118,6 +118,33 @@ def system_return_output(cmd, capture_stderr=False):
         if capture_stderr:
             error = e.output
     return str_nl(output) + str_nl(error)
+
+def setup_logger(opts, conf):
+    """
+    Log to stderr and optional logfile
+    """
+    log_level = get_opt(opts.loglevel, conf, 'LOG_LEVEL', 'INFO')
+    log_file  = get_opt(opts.logfile, conf, 'LOG_FILE', False)
+    log_format = '%(asctime)s %(levelname)-8s %(message)s'
+    
+    # Parse log level
+    num_level = getattr(logging, log_level.upper(), None)
+    if not isinstance(num_level, int):
+        raise ValueError('Invalid log level: %s' % log_level)
+    
+    logging.basicConfig(format=log_format, level=num_level)
+
+    # Toggle Boto logging
+    if conf.get('LOG_BOTO', 'FALSE').upper() == 'FALSE':
+        logging.getLogger('boto').propagate = False
+
+    # Log to file
+    if log_file:
+        file_handler = logging.handlers.WatchedFileHandler(log_file, delay=True)
+        file_handler.setFormatter(logging.Formatter(log_format))
+        logging.getLogger().addHandler(file_handler)
+
+    logging.debug('Effective log level: %d', logging.getLogger().getEffectiveLevel())
 
 def get_opt(opt, conf, conf_key, default=None, must_exist=False):
     def g():

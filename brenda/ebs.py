@@ -15,10 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import time
-
 import boto
-
-from brenda import aws, utils
+from brenda import brenda, aws, utils
 
 def create_instance_with_ebs(opts, conf, new):
     ami_id = utils.get_opt(opts.ami, conf, 'AMI_ID', must_exist=True)

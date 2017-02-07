@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import random
+import random, logging
 from brenda import aws
 
 def subframe_iterator_defined(opts):
@@ -41,6 +41,12 @@ def push(opts, args, conf):
     # get task script
     with open(opts.task_script) as f:
         task_script = f.read()
+    
+    # check for shebang
+    try:
+        task_script.startswith("#!")
+    except Exception:
+        logging.exception('Shebang (#!) is missing from task script: %s', opts.task_script)
 
     # build tasklist
     tasklist = []
@@ -74,20 +80,26 @@ def push(opts, args, conf):
         q = aws.create_sqs_queue(conf)
 
     # push work queue to sqs
+    i = 1
     for task in tasklist:
-        print task,
+        logging.info("Creating task %d: %s", i, task.replace("\n"," "))
+        i = (i + 1)
         if q is not None:
             aws.write_sqs_queue(task, q)
 
 def status(opts, args, conf):
     q = aws.get_sqs_queue(conf)
     if q is not None:
-        print "Queued tasks:", q.count()
+        logging.info("%d tasks queued", q.count())
+    else:
+        logging.info("No tasks queued")
 
 def reset(opts, args, conf):
     q, conn = aws.get_sqs_conn_queue(conf)
     if q:
         if opts.hard:
+            logging.info('Deleting queue %s', aws.get_sqs_work_queue_name(conf))
             conn.delete_queue(q)
         else:
+            logging.info('Clearing queue %s', aws.get_sqs_work_queue_name(conf))
             q.clear()

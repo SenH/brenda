@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, sys, signal, subprocess, multiprocessing, stat, time
+import os, sys, signal, subprocess, multiprocessing, stat, time, logging
 import paracurl
 from brenda import aws, utils, error
 
@@ -51,14 +51,14 @@ def s3_push_process(opts, args, conf, outdir):
         for dirpath, dirnames, filenames in os.walk(outdir):
             for f in filenames:
                 path = os.path.join(dirpath, f)
-                print "PUSH", path, "TO", aws.format_s3_url(bucktup, f)
+                logging.info('Uploading %s to %s', path, aws.format_s3_url(bucktup, f))
                 aws.put_s3_file(bucktup, path, f)
             break
 
     try:
         error.retry(conf, do_s3_push)
-    except Exception, e:
-        print "S3 push failed:", e
+    except Exception:
+        logging.exception('Upload to S3 failed')
         sys.exit(1)
     sys.exit(0)
 
@@ -85,7 +85,7 @@ def run_tasks(opts, args, conf):
         utils.write_atomic(os.path.join(work_dir, 'task_last'), "%d\n" % (time.time(),))
 
     def signal_handler(signal, frame):
-        print "******* SIGNAL %r, exiting" % (signal,)
+        logging.warning("Exit on signal %r", signal)
         cleanup_all()
         sys.exit(1)
 
@@ -100,25 +100,27 @@ def run_tasks(opts, args, conf):
         if task:
             if task.msg is not None:
                 try:
+                    logging.debug('Returning render task \"%s #%s\" back to SQS queue', task.script_name, task.id)
                     msg = task.msg
                     task.msg = None
                     msg.change_visibility(0) # immediately return task back to work queue
-                except Exception, e:
-                    print "******* CLEANUP EXCEPTION sqs change_visibility", name, e
+                except Exception:
+                    logging.exception('Failed changing SQS message visibility of task %s', name)
             if task.proc is not None:
                 try:
+                    logging.debug('Stopping processing of render task: %s #%s', task.script_name, task.id)
                     proc = task.proc
                     task.proc = None
                     proc.stop()
-                except Exception, e:
-                    print "******* CLEANUP EXCEPTION proc stop", name, e
+                except Exception:
+                    logging.exception('Failed stopping processing of task %s', name)
             if task.outdir is not None:
                 try:
                     outdir = task.outdir
                     task.outdir = None
                     utils.rmtree(outdir)
-                except Exception, e:
-                    print "******* CLEANUP EXCEPTION rm outdir", name, task.outdir, e
+                except Exception:
+                    logging.exception('Failed removing task dir %s', task.outdir)
 
     def task_loop():
         try:
@@ -153,11 +155,12 @@ def run_tasks(opts, args, conf):
                 task.msg = q.read()
 
                 # output some debug info
-                print "queue read:", task.msg
+                logging.debug('Reading work queue')
                 if local.task_push:
-                    print "push task:", local.task_push.__dict__
+                    logging.info("Running upload task #%d", local.task_push.id)
+                    logging.debug(local.task_push.__dict__)
                 else:
-                    print "no task push task"
+                    logging.info('No upload task available')
 
                 # process task
                 if task.msg is not None:
@@ -175,31 +178,27 @@ def run_tasks(opts, args, conf):
 
                     # get the task script
                     script = task.msg.get_body()
-                    print "script len:", len(script)
 
                     # do macro substitution on the task script
                     script = script.replace('$OUTDIR', task.outdir)
 
-                    # add shebang if absent
-                    if not script.startswith("#!"):
-                        script = "#!/bin/bash\n" + script
-
                     # cd to project directory, where we will run render task from
                     with utils.Cd(proj_dir) as cd:
                         # write script file and make it executable
-                        script_fn = "./brenda-go"
+                        # TODO Set original task script filename via SQS attribute
+                        script_fn = "./brenda-task-script"
                         with open(script_fn, 'w') as f:
                             f.write(script)
                         st = os.stat(script_fn)
                         os.chmod(script_fn, st.st_mode | (stat.S_IEXEC|stat.S_IXGRP|stat.S_IXOTH))
 
                         # run the script
-                        print "------- Run script %s -------" % (os.path.realpath(script_fn),)
-                        print script,
-                        print "--------------------------"
+                        logging.info("Executing task script: %s", os.path.realpath(script_fn))
+                        logging.debug(script.replace("\n"," "))
                         task.proc = Subprocess([script_fn])
 
-                    print "active task:", local.task_active.__dict__
+                    logging.info('Running render task #%d', local.task_active.id)
+                    logging.debug(local.task_active.__dict__)
 
                 # Wait for active and S3-push tasks to complete,
                 # while periodically reasserting with SQS to
@@ -223,16 +222,18 @@ def run_tasks(opts, args, conf):
 
                                     # did process finish with errors?
                                     if task.retcode != 0:
-                                        errtxt = "fatal error in %s task" % (name,)
                                         if name == 'active':
+                                            errtxt = "Render task \"{} #{}\" exited with status code {}".format(
+                                            task.script_name, task.id, task.retcode)
                                             raise error.ValueErrorRetry(errtxt)
                                         else:
+                                            errtxt = "Upload task #{} exited with status code {}".format(task.id, task.retcode)
                                             raise ValueError(errtxt)
 
                                     # Process finished successfully.  If S3-push process,
                                     # tell SQS that the task completed successfully.
                                     if name == 'push':
-                                        print "******* TASK", task.id, "COMMITTED to S3"
+                                        logging.info('Finished upload task #%d', task.id)
                                         q.delete_message(task.msg)
                                         task.msg = None
                                         local.task_count += 1
@@ -240,11 +241,12 @@ def run_tasks(opts, args, conf):
 
                                     # active task completed?
                                     if name == 'active':
-                                        print "******* TASK", task.id, "READY-FOR-PUSH"
+                                        logging.info('Finished render task #%d', task.id)
 
                             # tell SQS that we are still working on the task
                             if reassert and task.proc is not None:
-                                print "******* REASSERT", name, task.id
+                                log_task_name = name.replace('push', 'upload').replace('active', 'render')
+                                logging.debug('Reasserting %s task %d with SQS', log_task_name, task.id)
                                 task.msg.change_visibility(visibility_timeout)
 
                     # break out of loop only when no pending tasks remain
@@ -272,9 +274,10 @@ def run_tasks(opts, args, conf):
                 # if no active task and no S3-push task, we are done (unless DONE is set to "poll")
                 if not local.task_active and not local.task_push:
                     if read_done_file() == "poll":
-                        print "Polling for more work..."
+                        logging.info('Waiting for tasks...')
                         time.sleep(15)
                     else:
+                        logging.info('Exiting')
                         break
 
         finally:
@@ -313,18 +316,18 @@ def run_tasks(opts, args, conf):
         try:
             instance_id = aws.get_instance_id_self()
             spot_request_id = aws.get_spot_request_from_instance_id(conf, instance_id)
-            print "Spot request ID:", spot_request_id
-        except Exception, e:
-            print "Error determining spot instance request:", e
+            logging.info('Spot request ID: %s', spot_request_id)
+        except Exception:
+            logging.exception('Failed getting spot instance request')
 
     # get project (from s3:// or file://)
     render_project = conf.get('RENDER_PROJECT')
     if not render_project:
-        raise ValueError("RENDER_PROJECT not defined in configuration")
+        raise ValueError("RENDER_PROJECT is not set")
 
     # directory that render task will be run from
     proj_dir = get_project(conf, render_project)
-    print "PROJ_DIR", proj_dir
+    logging.info('Project folder: %s', proj_dir)
 
     # mount additional EBS volumes
     aws.mount_additional_ebs(conf, proj_dir)
@@ -340,13 +343,13 @@ def run_tasks(opts, args, conf):
                 try:
                     # persistent spot instances must be explicitly cancelled, or
                     # EC2 will automatically requeue the spot instance request
-                    print "Canceling spot instance request:", spot_request_id
+                    logging.info("Canceling spot instance request: %s", spot_request_id)
                     aws.cancel_spot_request(conf, spot_request_id)
-                except Exception, e:
-                    print "Error canceling spot instance request:", e
+                except Exception:
+                    logging.exception("Failed canceling spot instance request")
             utils.shutdown()
 
-        print "******* DONE (%d tasks completed)" % (local.task_count,)
+        logging.info('Completed %d tasks', local.task_count)
 
 def get_s3_project(conf, s3url, proj_dir):
     # target file in which to save S3 download
@@ -361,7 +364,7 @@ def get_s3_project(conf, s3url, proj_dir):
         try:
             with open(os.path.join(proj_dir, fn + '.etag')) as efn:
                 etag = efn.read().strip()
-        except Exception, e:
+        except Exception:
             pass
 
     # create new directory to download project
@@ -392,7 +395,7 @@ def get_s3_project(conf, s3url, proj_dir):
     except paracurl.Exception, e:
         if e[0] == paracurl.PC_ERR_ETAG_MATCH:
             # file was previously downloaded, don't need new_dir
-            print "Note: retaining previous download of", s3url
+            logging.warning('Skip download from %s. Project is up to date.', s3url)
         else:
             raise
 

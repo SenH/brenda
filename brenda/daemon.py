@@ -1,4 +1,4 @@
-import os, sys, time, signal, atexit
+import os, sys, time, signal, atexit, logging
 
 class Daemon(object):
     """
@@ -65,7 +65,7 @@ class Daemon(object):
     def delpid(self):
         try:
             os.remove(self.pidfile)
-        except Exception, e:
+        except Exception:
             pass
 
     def start(self):
@@ -117,7 +117,7 @@ class Daemon(object):
             if err.find("No such process") > 0:
                 self.delpid()
             else:
-                print str(err)
+                logging.error(err)
                 sys.exit(1)
 
     def restart(self):

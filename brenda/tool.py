@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import threading, time, Queue
+import threading, time, Queue, logging
 from brenda import aws, utils
 
 def instances(opts, conf):
@@ -54,7 +54,7 @@ def run_cmd_list(opts, conf, cmd_seq, show_output, capture_stderr):
         while True:
             try:
                 item = q.get(block=False)
-            except Queue.Empty, e:
+            except Queue.Empty:
                 break
             else:
                 node, cmd = item

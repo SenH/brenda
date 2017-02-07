@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import time, httplib, socket
+import time, httplib, socket, logging
 import boto.exception
 
 class ValueErrorRetry(ValueError):
@@ -34,18 +34,19 @@ def retry(conf, action):
     i = 0
     while True:
         try:
+            logging.debug('Retrying error action: %s', action)
             ret = action()
         # These are the exception types that justify a retry -- extend this list as needed
         except (httplib.IncompleteRead, socket.error, boto.exception.BotoClientError, ValueErrorRetry), e:
             now = int(time.time())
             if now > reset + reset_period:
-                print "******* RETRY RESET"
+                logging.info('Reset error retry')
                 i = 0
                 reset = now
             i += 1
-            print "******* RETRY %d/%d: %s" % (i, n_retries, e)
+            logging.warning('Retry error %d/%d: %s', i, n_retries, e)
             if i < n_retries:
-                print "******* WAITING %d seconds..." % (error_pause,)
+                logging.info('Waiting %d seconds before retrying error', error_pause)
                 time.sleep(error_pause)
             else:
                 raise ValueError("FAIL after %d retries" % (n_retries,))

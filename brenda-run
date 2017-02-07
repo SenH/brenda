@@ -17,7 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys, os, optparse
-from brenda import aws, config, run, version
+from brenda import aws, config, run, version, utils
 
 def main():
     usage = """\
@@ -100,8 +100,12 @@ Examples:
 
     defconf = aws.config_file_name()
 
-    parser.add_option("-c", "--config", dest="config", default=defconf,
+    parser.add_option("-c", "--config", dest="config", default=defconf, metavar="FILE",
                       help="Configuration file (default: %default)")
+    parser.add_option("-l", "--logfile", dest="logfile", metavar="FILE",
+                      help="Save log to file")
+    parser.add_option("-v", "--loglevel", dest="loglevel",
+                      help="Level of events to log (default: INFO)")
 
     parser.add_option("-a", "--ami", dest="ami",
                       help="AMI ID to use when starting EC2 instances, overrides config variable AMI_ID")
@@ -142,6 +146,7 @@ Examples:
     # Get configuration
     conf = config.Config(opts.config, 'BRENDA_')
     #print "CONFIG", conf
+    utils.setup_logger(opts, conf)
 
     # dispatch
     if args[0] == 'demand':

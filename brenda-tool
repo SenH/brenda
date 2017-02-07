@@ -17,7 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys, os, optparse
-from brenda import aws, config, tool, version
+from brenda import aws, config, tool, version, utils
 
 def main():
     usage = """\
@@ -84,8 +84,12 @@ Examples:
 
     defconf = aws.config_file_name()
 
-    parser.add_option("-c", "--config", dest="config", default=defconf,
+    parser.add_option("-c", "--config", dest="config", default=defconf, metavar="FILE",
                       help="Configuration file (default: %default)")
+    parser.add_option("-l", "--logfile", dest="logfile", metavar="FILE",
+                      help="Save log to file")
+    parser.add_option("-v", "--loglevel", dest="loglevel",
+                      help="Level of events to log (default: INFO)")
 
     parser.add_option("-u", "--user", dest="user",
                       help="Username to use when logging into remote EC2 nodes, overrides environmental variable AWS_USER")
@@ -107,14 +111,15 @@ Examples:
 
     # Get command line arguments...
     ( opts, args ) = parser.parse_args()
-    #print "OPTS", (opts, args)
+    # print "OPTS", (opts, args)
     if not args:
         print >>sys.stderr, "no work, run with -h for usage"
         sys.exit(2)
 
     # Get configuration
     conf = config.Config(opts.config, 'BRENDA_')
-    #print "CONFIG", conf
+    # print "CONFIG", conf
+    utils.setup_logger(opts, conf)
 
     # dispatch
     if args[0] == 'instances' or args[0] == 'i':

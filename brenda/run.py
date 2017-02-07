@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, time
+import os, time, logging
 from brenda import aws, utils
 
 def demand(opts, conf):
@@ -48,12 +48,12 @@ def demand(opts, conf):
         print "Instance store device:", istore_dev
     print "SSH key name:", ssh_key_name
     print "Security groups:", sec_groups
-    print_script(opts, conf, script)
+    print_script(opts, script)
     aws.get_done(opts, conf) # sanity check on DONE var
     if not opts.dry_run:
         ec2 = aws.get_ec2_conn(conf)
         reservation = ec2.run_instances(**run_args)
-        print reservation
+        logging.info(reservation)
 
 def spot(opts, conf):
     ami_id = utils.get_opt(opts.ami, conf, 'AMI_ID', must_exist=True)
@@ -92,12 +92,12 @@ def spot(opts, conf):
         print "Instance store device:", istore_dev
     print "SSH key name:", ssh_key_name
     print "Security groups:", sec_groups
-    print_script(opts, conf, script)
+    print_script(opts, script)
     aws.get_done(opts, conf) # sanity check on DONE var
     if not opts.dry_run:
         ec2 = aws.get_ec2_conn(conf)
         reservation = ec2.request_spot_instances(**run_args)
-        print reservation
+        logging.info(reservation)
 
 def price(opts, conf):
     ec2 = aws.get_ec2_conn(conf)
@@ -124,7 +124,7 @@ def stop(opts, conf):
 def cancel(opts, conf):
     ec2 = aws.get_ec2_conn(conf)
     requests = [r.id for r in ec2.get_all_spot_instance_requests()]
-    print "CANCEL", requests
+    logging.info('Cancel %s', requests)
     if not opts.dry_run:
         ec2.cancel_spot_instance_requests(requests)
 
@@ -141,7 +141,6 @@ def status(opts, conf):
     if requests:
         print "Spot Requests"
         for r in requests:
-            dns_name = ''
             print "  %s %s %s %s $%s %s %s" % (r.id, r.region, r.type, r.create_time, r.price, r.state, r.status)
 
 def script(opts, conf):
@@ -161,7 +160,7 @@ def init(opts, conf):
             if not opts.aws_ssh_pull and aws.local_ssh_keys_exist(opts, conf):
                 # push local ssh public key to AWS
                 pubkey_fn = aws.get_ssh_pubkey_fn(opts, conf)
-                print "Pushing ssh public key %r to AWS under %r key pair." % (pubkey_fn, ssh_key_name)
+                logging.info("Importing ssh public key %r to AWS under %r key pair.", pubkey_fn, ssh_key_name)
                 with open(pubkey_fn) as f:
                     pubkey = f.read()
                     res = ec2.import_key_pair(ssh_key_name, pubkey)
@@ -169,7 +168,7 @@ def init(opts, conf):
             else:
                 # get new ssh public key pair from AWS
                 brenda_ssh_ident_fn = aws.get_brenda_ssh_identity_fn(opts, conf, mkdir=True)
-                print "Fetching ssh private key from AWS into %r under %r key pair." % (brenda_ssh_ident_fn, ssh_key_name)
+                logging.info("Creating ssh private key from AWS into %r under %r key pair.", brenda_ssh_ident_fn, ssh_key_name)
                 keypair = ec2.create_key_pair(key_name=ssh_key_name)
                 with open(brenda_ssh_ident_fn, 'w') as f:
                     pass
@@ -177,18 +176,18 @@ def init(opts, conf):
                 with open(brenda_ssh_ident_fn, 'w') as f:
                     f.write(keypair.material)
         except Exception, e:
-            print "Error creating ssh key pair", e
+            logging.exception("Failed creating ssh key pair")
 
     # create security group
     if not opts.no_security_group:
         try:
             sec_group = conf.get("SECURITY_GROUP", "brenda")
-            print "Creating AWS security group %r." % (sec_group,)
+            logging.info("Creating Brenda security group %r", sec_group)
             sg = ec2.create_security_group(sec_group, 'Brenda security group')
             sg.authorize('tcp', 22, 22, '0.0.0.0/0')  # ssh
             sg.authorize('icmp', -1, -1, '0.0.0.0/0') # all ICMP
         except Exception, e:
-            print "Error creating security group", e
+            logging.exception("Failed creating Brenda security group")
 
 def reset_keys(opts, conf):
     ec2 = aws.get_ec2_conn(conf)
@@ -197,23 +196,23 @@ def reset_keys(opts, conf):
     if not opts.no_ssh_keys:
         try:
             ssh_key_name = conf.get("SSH_KEY_NAME", "brenda")
-            print "Removing AWS ssh key pair %r." % (ssh_key_name,)
+            logging.info("Deleting AWS ssh key pair %r.", ssh_key_name)
             ec2.delete_key_pair(key_name=ssh_key_name)
             brenda_ssh_ident_fn = aws.get_brenda_ssh_identity_fn(opts, conf)
             if os.path.exists(brenda_ssh_ident_fn):
-                print "Removing AWS local ssh identity %r." % (brenda_ssh_ident_fn,)
+                logging.info("Removing local ssh identity %r.", brenda_ssh_ident_fn)
                 os.remove(brenda_ssh_ident_fn)
         except Exception, e:
-            print "Error removing ssh key pair", e
+            logging.exception("Failed removing ssh key pair")
 
     # remove security group
     if not opts.no_security_group:
         try:
             sec_group = conf.get("SECURITY_GROUP", "brenda")
-            print "Removing AWS security group %r." % (sec_group,)
+            logging.info("Removing Brenda security group %r", sec_group)
             ec2.delete_security_group(name=sec_group)
         except Exception, e:
-            print "Error removing security group", e
+            logging.exception("Failed removing Brenda security group")
 
 def startup_script(opts, conf, istore_dev):
     login_dir = "/root"
@@ -286,7 +285,7 @@ cd "$B"
     script += tail
     return script
 
-def print_script(opts, conf, script):
+def print_script(opts, script):
     if not opts.idle:
         print "Startup Script:"
         for line in script.splitlines():

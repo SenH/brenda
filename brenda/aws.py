@@ -234,13 +234,13 @@ def shutdown(opts, conf, iids):
     # Note that persistent spot instances must be explicitly cancelled,
     # or EC2 will automatically requeue the spot instance request
     if opts.terminate:
-        print "TERMINATE", iids
+        logging.info('Terminate EC2 instance: %s', iids)
         if not opts.dry_run and iids:
             conn = get_ec2_conn(conf)
             cancel_spot_requests_from_instance_ids(conn, instance_ids=iids)
             conn.terminate_instances(instance_ids=iids)
     else:
-        print "SHUTDOWN", iids
+        logging.info('Shutdown EC2 instance: %s', iids)
         if not opts.dry_run and iids:
             conn = get_ec2_conn(conf)
             cancel_spot_requests_from_instance_ids(conn, instance_ids=iids)
@@ -385,7 +385,7 @@ def cancel_spot_request(conf, sir):
 def cancel_spot_requests_from_instance_ids(conn, instance_ids):
     instances = get_ec2_instances_from_conn(conn, instance_ids=instance_ids)
     sirs = [ i.spot_instance_request_id for i in instances if i.spot_instance_request_id ]
-    print "CANCEL", sirs
+    logging.info('Cancel spot request: %s', sirs)
     if sirs:
         conn.cancel_spot_instance_requests(request_ids=sirs)
 
