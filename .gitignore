@@ -1,7 +1,6 @@
+.tm_properties
+build
 *.so
 *.tmp
+*.log
 *.pyc
-task_count
-task_last
-DONE
-test/work
