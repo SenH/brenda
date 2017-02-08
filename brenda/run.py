@@ -36,6 +36,7 @@ def demand(opts, conf):
         'key_name'      : ssh_key_name,
         'security_groups' : sec_groups,
         'block_device_map' : bdm,
+        'dry_run'       : opts.dry_run,
         }
 
     print "----------------------------"
@@ -50,10 +51,13 @@ def demand(opts, conf):
     print "Security groups:", sec_groups
     print_script(opts, script)
     aws.get_done(opts, conf) # sanity check on DONE var
-    if not opts.dry_run:
-        ec2 = aws.get_ec2_conn(conf)
-        reservation = ec2.run_instances(**run_args)
-        logging.info(reservation)
+
+    # Request instances
+    ec2 = aws.get_ec2_conn(conf)
+    logging.debug('Instance parameters: %s', run_args)
+    reservation = ec2.run_instances(**run_args)
+    logging.info('Instances %s', reservation)
+    tag_demand_resources(conf, reservation, dict(opts.tags))
 
 def spot(opts, conf):
     ami_id = utils.get_opt(opts.ami, conf, 'AMI_ID', must_exist=True)
@@ -78,6 +82,7 @@ def spot(opts, conf):
         'key_name'      : ssh_key_name,
         'security_groups' : sec_groups,
         'block_device_map' : bdm,
+        'dry_run'       : opts.dry_run,
         }
 
     print "----------------------------"
@@ -94,10 +99,13 @@ def spot(opts, conf):
     print "Security groups:", sec_groups
     print_script(opts, script)
     aws.get_done(opts, conf) # sanity check on DONE var
-    if not opts.dry_run:
-        ec2 = aws.get_ec2_conn(conf)
-        reservation = ec2.request_spot_instances(**run_args)
-        logging.info(reservation)
+
+    # Request spot instances
+    ec2 = aws.get_ec2_conn(conf)
+    logging.debug('Instance parameters: %s', run_args)
+    reservation = ec2.request_spot_instances(**run_args)
+    logging.info('Spot instances %s', reservation)
+    tag_spot_resources(conf, reservation, dict(opts.tags))
 
 def price(opts, conf):
     ec2 = aws.get_ec2_conn(conf)
@@ -163,8 +171,7 @@ def init(opts, conf):
                 logging.info("Importing ssh public key %r to AWS under %r key pair.", pubkey_fn, ssh_key_name)
                 with open(pubkey_fn) as f:
                     pubkey = f.read()
-                    res = ec2.import_key_pair(ssh_key_name, pubkey)
-                    print res
+                    keypair = ec2.import_key_pair(ssh_key_name, pubkey)
             else:
                 # get new ssh public key pair from AWS
                 brenda_ssh_ident_fn = aws.get_brenda_ssh_identity_fn(opts, conf, mkdir=True)
@@ -184,6 +191,8 @@ def init(opts, conf):
             sec_group = conf.get("SECURITY_GROUP", "brenda")
             logging.info("Creating Brenda security group %r", sec_group)
             sg = ec2.create_security_group(sec_group, 'Brenda security group')
+            logging.debug('Tagging %s with %s', sg, dict(opts.tags))
+            ec2.create_tags(sg.id, dict(opts.tags))
             sg.authorize('tcp', 22, 22, '0.0.0.0/0')  # ssh
             sg.authorize('icmp', -1, -1, '0.0.0.0/0') # all ICMP
         except Exception, e:
@@ -297,3 +306,66 @@ def print_script(opts, script):
 
 def brenda_instance_type(opts, conf):
     return utils.get_opt(opts.instance_type, conf, 'INSTANCE_TYPE', default="m2.xlarge")
+
+def tag_demand_resources(conf, reservation, tags):
+    """
+    Tag demand resources
+    http://boto.cloudhackers.com/en/latest/ref/ec2.html#boto.ec2.instance.Reservation
+    """
+    ec2 = aws.get_ec2_conn(conf)
+    tag_ids = []
+    
+    # Tag instances
+    for instance in reservation.instances:
+        tag_ids.extend(get_tag_instance_ids(conf, instance.id))
+
+    logging.info('Tagging %s with %s', tag_ids, tags)
+    ec2.create_tags(tag_ids, tags)
+
+def tag_spot_resources(conf, reservation, tags):
+    """
+    Tag spot resources
+    http://boto.cloudhackers.com/en/latest/ref/ec2.html#module-boto.ec2.spotinstancerequest
+    """
+    ec2 = aws.get_ec2_conn(conf)
+    tag_ids = []
+
+    # Tag reservations
+    for res in reservation:    
+        logging.info('Tagging %s with %s', res, tags)
+        ec2.create_tags(res.id, tags)
+
+        # Wait until request is fulfilled
+        while True:
+            logging.debug('Waiting for spot request to be fulfilled...')
+            time.sleep(3)
+            spot_request = ec2.get_all_spot_instance_requests(res.id)[0]
+            if spot_request.state != 'open':
+                break
+            
+        # Tag instance
+        tag_ids.extend(get_tag_instance_ids(conf, spot_request.instance_id))
+
+    logging.info('Tagging %s with %s', tag_ids, tags)
+    ec2.create_tags(tag_ids, tags)
+
+def get_tag_instance_ids(conf, instance_id):
+    ec2 = aws.get_ec2_conn(conf)
+    tag_ids = []
+
+    logging.info('Getting instance %s', instance_id)
+    tag_ids.append(instance_id)
+    
+    # Wait for block volumes
+    while True:
+        logging.debug('Waiting for block volumes...')
+        time.sleep(3)
+        inst_attr = ec2.get_instance_attribute(instance_id=instance_id, attribute='blockDeviceMapping')
+        if len(inst_attr['blockDeviceMapping']) > 0:
+            for block_device in inst_attr['blockDeviceMapping'].itervalues():
+                # print block_device.__dict__
+                logging.info('Getting block volume %s', block_device.volume_id)
+                tag_ids.append(block_device.volume_id)
+            break
+    
+    return tag_ids

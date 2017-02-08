@@ -125,6 +125,8 @@ Examples:
                       help="Match only on instances whose uptime is > n minutes after the hour, default=%default")
     parser.add_option("", "--imatch", dest="imatch",
                       help="Match only on specific instance type(s), provide as a comma-separated list of instance types")
+    parser.add_option("--tag", action="append", nargs=2, dest="tags", metavar="KEY VALUE", default=[("Stack","brenda-render")],
+                      help="Tag to use when adding or filtering EC2 resources. Can be given multiple times")
 
     parser.add_option("", "--no-ssh-keys", action="store_true", dest="no_ssh_keys",
                       help="for init/reset-keys, don't create/remove a 'brenda' ssh key pair on AWS")
@@ -138,14 +140,14 @@ Examples:
 
     # Get command line arguments...
     ( opts, args ) = parser.parse_args()
-    #print "OPTS", (opts, args)
+    # print "OPTS", (opts, args)
     if not args:
         print >>sys.stderr, "no work, run with -h for usage"
         sys.exit(2)
 
     # Get configuration
     conf = config.Config(opts.config, 'BRENDA_')
-    #print "CONFIG", conf
+    # print "CONFIG", conf
     utils.setup_logger(opts, conf)
 
     # dispatch
