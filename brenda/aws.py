@@ -160,13 +160,12 @@ def write_sqs_queue(string, queue, attributes=None):
         m.message_attributes = attributes
     queue.write(m)
 
-def get_ec2_instances_from_conn(conn, instance_ids=None):
-    reservations = conn.get_all_instances(instance_ids=instance_ids)
-    return [i for r in reservations for i in r.instances]
+def get_ec2_instances_from_conn(conn, instance_ids=None, filters=None):
+    return conn.get_only_instances(instance_ids=instance_ids,filters=filters)
 
-def get_ec2_instances(conf, instance_ids=None):
+def get_ec2_instances(conf, instance_ids=None, filters=None):
     conn = get_ec2_conn(conf)
-    return get_ec2_instances_from_conn(conn, instance_ids)
+    return get_ec2_instances_from_conn(conn, instance_ids, filters)
 
 def get_snapshots(conf):
     conn = get_ec2_conn(conf)
@@ -199,29 +198,29 @@ def get_uptime(now, aws_launch_time):
     lt = boto.utils.parse_ts(aws_launch_time)
     return int(now - calendar.timegm(lt.timetuple()))
 
-def filter_instances(opts, conf, hostset=None):
+def filter_instances(opts, conf, filters={}):
     def threshold_test(aws_launch_time):
         ut = get_uptime(now, aws_launch_time)
         return (ut / 60) % 60 >= opts.threshold
-
-    now = time.time()
-    ami = utils.get_opt(opts.ami, conf, 'AMI_ID')
-    if opts.imatch:
-        imatch = frozenset(opts.imatch.split(','))
-    else:
-        imatch = None
-    if hostset is None:
+    def get_filter_hosts(opts):
+        hosts = []
         if getattr(opts, 'hosts_file', None):
             with open(opts.hosts_file, 'r') as f:
-                hostset = frozenset([line.strip() for line in f.readlines()])
-        elif getattr(opts, 'host', None):
-            hostset = frozenset((opts.host,))
-    inst = [i for i in get_ec2_instances(conf)
-            if i.image_id and i.public_dns_name
-            and threshold_test(i.launch_time)
-            and (imatch is None or i.instance_type in imatch)
-            and (ami is None or ami == i.image_id)
-            and (hostset is None or i.public_dns_name in hostset)]
+                hosts = [line.strip() for line in f.readlines()]
+        if getattr(opts, 'host', None):
+            hosts.append(opts.host)
+        return hosts
+
+    now = time.time()
+    if opts.tags:
+        filters.update(get_filter_tags(dict(opts.tags)))
+    if opts.imatch:
+        filters['instance-type'] = opts.imatch
+    hosts = get_filter_hosts(opts)
+    if len(hosts) > 0:
+        filters['dns-name'] = hosts
+    logging.debug('Instance filters: %s', filters)
+    inst = [i for i in get_ec2_instances(conf, filters=filters) if threshold_test(i.launch_time)]
     inst.sort(key = lambda i : (i.image_id, i.launch_time, i.public_dns_name))
     return inst
 
@@ -235,18 +234,17 @@ def shutdown_by_public_dns_name(opts, conf, dns_names):
 def shutdown(opts, conf, iids):
     # Note that persistent spot instances must be explicitly cancelled,
     # or EC2 will automatically requeue the spot instance request
+    if not iids:
+        return logging.debug('Shutdown: No instances specified')
+    conn = get_ec2_conn(conf)
     if opts.terminate:
         logging.info('Terminate EC2 instance: %s', iids)
-        if not opts.dry_run and iids:
-            conn = get_ec2_conn(conf)
-            cancel_spot_requests_from_instance_ids(conn, instance_ids=iids)
-            conn.terminate_instances(instance_ids=iids)
+        cancel_spot_requests_from_instance_ids(conn, iids, opts.dry_run)
+        conn.terminate_instances(instance_ids=iids, dry_run=opts.dry_run)
     else:
         logging.info('Shutdown EC2 instance: %s', iids)
-        if not opts.dry_run and iids:
-            conn = get_ec2_conn(conf)
-            cancel_spot_requests_from_instance_ids(conn, instance_ids=iids)
-            conn.stop_instances(instance_ids=iids)
+        cancel_spot_requests_from_instance_ids(conn, iids, opts.dry_run)
+        conn.stop_instances(instance_ids=iids, dry_run=opts.dry_run)
 
 def get_ssh_pubkey_fn(opts, conf):
     v = conf.get('SSH_PUBKEY')
@@ -370,6 +368,12 @@ def get_instance_id_self():
     the_page = response.read()
     return the_page
 
+def get_all_spot_instance_requests(opts, conf, filters={}):
+    ec2 = get_ec2_conn(conf)
+    filters.update(get_filter_tags(dict(opts.tags)))
+    logging.debug('Spot request filters: %s', filters)
+    return ec2.get_all_spot_instance_requests(filters=filters)
+
 def get_spot_request_dict(conf):
     ec2 = get_ec2_conn(conf)
     requests = ec2.get_all_spot_instance_requests()
@@ -384,12 +388,12 @@ def cancel_spot_request(conf, sir):
     conn = get_ec2_conn(conf)
     conn.cancel_spot_instance_requests(request_ids=(sir,))
 
-def cancel_spot_requests_from_instance_ids(conn, instance_ids):
+def cancel_spot_requests_from_instance_ids(conn, instance_ids, dry_run=False):
     instances = get_ec2_instances_from_conn(conn, instance_ids=instance_ids)
     sirs = [ i.spot_instance_request_id for i in instances if i.spot_instance_request_id ]
     logging.info('Cancel spot request: %s', sirs)
     if sirs:
-        conn.cancel_spot_instance_requests(request_ids=sirs)
+        conn.cancel_spot_instance_requests(request_ids=sirs,dry_run=dry_run)
 
 def config_file_name():
     config = os.environ.get("BRENDA_CONFIG")
@@ -414,3 +418,6 @@ def get_done(opts, conf):
         else:
             sd = int(conf.get('SHUTDOWN', '0'))
             return 'shutdown' if sd else 'exit'
+
+def get_filter_tags(tags):
+    return dict(map(lambda (key, value): ('tag:'+key, value), tags.items()))

@@ -52,3 +52,9 @@ def retry(conf, action):
                 raise ValueError("FAIL after %d retries" % (n_retries,))
         else:
             return ret
+
+def handle_dry_run(e):
+    if e.error_code == 'DryRunOperation':
+        logging.warning(e.message)
+    else:
+        logging.error('%s %s %s - %s', e.__class__, e.status, e.reason, e.message)

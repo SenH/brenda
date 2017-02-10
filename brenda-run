@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, os, optparse
-from brenda import aws, config, run, version, utils
+import sys, optparse
+import boto
+from brenda import aws, config, error, run, version, utils
 
 def main():
     usage = """\
@@ -35,7 +36,7 @@ Commands:
   stop   : stop all running EC2 instances (less fine-grained than
            "brenda-tool prune").
   cancel : cancel all spot requests.
-  status : show status of current EC2 spot requests and instances.
+  status : show status of active spot requests and running instances.
   init   : do one-time initialization of new AWS account by creating
            "brenda" SSH key name and Security Group.
   reset-keys  : undo the effects of "init" by deleting "brenda" SSH key
@@ -123,10 +124,10 @@ Examples:
                       help="Start the EC2 instances in the idle state, without automatically running brenda-node to begin task processing")
     parser.add_option("-t", "--threshold", type="int", dest="threshold", default=0,
                       help="Match only on instances whose uptime is > n minutes after the hour, default=%default")
-    parser.add_option("", "--imatch", dest="imatch",
-                      help="Match only on specific instance type(s), provide as a comma-separated list of instance types")
+    parser.add_option("-m", "--imatch", action="append", dest="imatch", metavar="TYPE",
+                      help="Match only on specific instance types. Option can be specified multiple times.")
     parser.add_option("--tag", action="append", nargs=2, dest="tags", metavar="KEY VALUE", default=[("Stack","brenda-render")],
-                      help="Tag to use when adding or filtering EC2 resources. Can be given multiple times")
+                      help="Match on specific tags. Option can be specified multiple times.")
 
     parser.add_option("", "--no-ssh-keys", action="store_true", dest="no_ssh_keys",
                       help="for init/reset-keys, don't create/remove a 'brenda' ssh key pair on AWS")
@@ -173,4 +174,7 @@ Examples:
         print >>sys.stderr, "unrecognized command:", args[0]
         sys.exit(2)
 
-main()
+try:
+    main()
+except boto.exception.EC2ResponseError as e:
+    error.handle_dry_run(e)

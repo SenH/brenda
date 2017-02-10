@@ -21,7 +21,7 @@ def instances(opts, conf):
     now = time.time()
     for i in aws.filter_instances(opts, conf):
         uptime = aws.get_uptime(now, i.launch_time)
-        print i.image_id, aws.format_uptime(uptime), i.public_dns_name
+        print i.state, i.image_id, aws.format_uptime(uptime), i.public_dns_name, i.tags
 
 def ssh_args(opts, conf):
     user = utils.get_opt(opts.user, conf, 'AWS_USER', default='root')
@@ -43,8 +43,8 @@ def ssh_cmd_list(opts, conf, args, instances=None):
         cmd.extend(args)
         yield node, cmd
 
-def rsync_cmd_list(opts, conf, args, hostset=None):
-    for i in aws.filter_instances(opts, conf, hostset=hostset):
+def rsync_cmd_list(opts, conf, args):
+    for i in aws.filter_instances(opts, conf):
         node = i.public_dns_name
         cmd = ['rsync', '-e', ' '.join(ssh_args(opts, conf))] + [a.replace('HOST', node) for a in args]
         yield node, cmd

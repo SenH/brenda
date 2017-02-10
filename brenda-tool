@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, os, optparse
-from brenda import aws, config, tool, version, utils
+import sys, optparse
+import boto
+from brenda import aws, config, error, tool, version, utils
 
 def main():
     usage = """\
@@ -50,10 +51,6 @@ Optional config vars:
   SSH_IDENTITY   : SSH identity file to access EC2 nodes, defaults to
                    $HOME/.ssh/id_rsa
   EC2_REGION : EC2 region name, defaults to US standard (optional).
-  AMI_ID : Amazon ID of render-farm AMI, to cause tool to filter all node
-           queries except for those running this AMI (optional).  This is
-           useful if you have other EC2 instances running in your AWS
-           account that are not associated with Brenda.
   AWS_USER : username when accessing AWS node (optional).
   TOOL_THREADS : max number of simultaneous threads to use when querying
                  multiple render farm instances (default=64).
@@ -95,14 +92,14 @@ Examples:
                       help="Username to use when logging into remote EC2 nodes, overrides environmental variable AWS_USER")
     parser.add_option("-n", "--host", dest="host",
                       help="ssh/rsync on specific host")
-    parser.add_option("-H", "--hosts-file", dest="hosts_file",
+    parser.add_option("-H", "--hosts-file", dest="hosts_file", metavar="FILE",
                       help="ssh/rsync on hosts listed in file")
-    parser.add_option("-a", "--ami", dest="ami",
-                      help="AMI ID to use when starting EC2 instances, overrides config variable AMI_ID")
     parser.add_option("-t", "--threshold", type="int", dest="threshold", default=0,
                       help="Match only on instances whose uptime is > n minutes after the hour, default=%default")
-    parser.add_option("", "--imatch", dest="imatch",
-                      help="Match only on specific instance type(s), provide as a comma-separated list of instance types")
+    parser.add_option("-m", "--imatch", action="append", dest="imatch", metavar="TYPE",
+                      help="Match only on specific instance types. Option can be specified multiple times.")
+    parser.add_option("--tag", action="append", nargs=2, dest="tags", metavar="KEY VALUE", default=[("Stack","brenda-render")],
+                      help="Match on specific tags. Option can be specified multiple times.")
 
     parser.add_option("-T", "--terminate", action="store_true", dest="terminate",
                       help="For prune, terminate instances instead of stopping them (required for AWS spot instances)")
@@ -136,4 +133,7 @@ Examples:
         print >>sys.stderr, "unrecognized command:", args[0]
         sys.exit(2)
 
-main()
+try:
+    main()
+except boto.exception.EC2ResponseError as e:
+    error.handle_dry_run(e)

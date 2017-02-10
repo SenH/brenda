@@ -56,8 +56,9 @@ def demand(opts, conf):
     ec2 = aws.get_ec2_conn(conf)
     logging.debug('Instance parameters: %s', run_args)
     reservation = ec2.run_instances(**run_args)
-    logging.info('Instances %s', reservation)
-    tag_demand_resources(conf, reservation, dict(opts.tags))
+    if not opts.dry_run:
+        logging.info(reservation)
+        tag_demand_resources(conf, reservation, dict(opts.tags))
 
 def spot(opts, conf):
     ami_id = utils.get_opt(opts.ami, conf, 'AMI_ID', must_exist=True)
@@ -104,15 +105,15 @@ def spot(opts, conf):
     ec2 = aws.get_ec2_conn(conf)
     logging.debug('Instance parameters: %s', run_args)
     reservation = ec2.request_spot_instances(**run_args)
-    logging.info('Spot instances %s', reservation)
-    tag_spot_resources(conf, reservation, dict(opts.tags))
+    if not opts.dry_run:
+        logging.info(reservation)
+        tag_spot_resources(conf, reservation, dict(opts.tags))
 
 def price(opts, conf):
     ec2 = aws.get_ec2_conn(conf)
     itype = brenda_instance_type(opts, conf)
     data = {}
-    for item in ec2.get_spot_price_history(instance_type=itype,
-                                           product_description="Linux/UNIX"):
+    for item in ec2.get_spot_price_history(instance_type=itype, product_description="Linux/UNIX"):
         # show the most recent price for each availability zone
         if item.availability_zone in data:
             if item.timestamp > data[item.availability_zone].timestamp:
@@ -131,25 +132,25 @@ def stop(opts, conf):
 
 def cancel(opts, conf):
     ec2 = aws.get_ec2_conn(conf)
-    requests = [r.id for r in ec2.get_all_spot_instance_requests()]
+    requests = aws.get_all_spot_instance_requests(opts, conf,  {'state': ['open', 'active']})
+    requests = [r.id for r in requests]
     logging.info('Cancel %s', requests)
-    if not opts.dry_run:
-        ec2.cancel_spot_instance_requests(requests)
+    ec2.cancel_spot_instance_requests(requests, opts.dry_run)
 
 def status(opts, conf):
-    ec2 = aws.get_ec2_conn(conf)
-    instances = aws.filter_instances(opts, conf)
+    now = time.time()
+    instances = aws.filter_instances(opts, conf, {'instance-state-name': 'running'})
     if instances:
-        print "Active Instances"
-        now = time.time()
-        for i in instances:
-            uptime = aws.get_uptime(now, i.launch_time)
-            print ' ', i.image_id, aws.format_uptime(uptime), i.public_dns_name
-    requests = ec2.get_all_spot_instance_requests()
+        print "Running Instances"
+    for i in instances:
+        uptime = aws.get_uptime(now, i.launch_time)
+        print ' ', i.image_id, aws.format_uptime(uptime), i.public_dns_name, i.tags
+
+    requests = aws.get_all_spot_instance_requests(opts, conf, {'state': ['active', 'open']})
     if requests:
-        print "Spot Requests"
-        for r in requests:
-            print "  %s %s %s %s $%s %s %s" % (r.id, r.region, r.type, r.create_time, r.price, r.state, r.status)
+        print "Active Spot Requests"
+    for r in requests:
+        print "  %s %s %s %s $%s %s %s %s" % (r.id, r.region, r.type, r.create_time, r.price, r.state, r.status, r.tags)
 
 def script(opts, conf):
     itype = brenda_instance_type(opts, conf)
@@ -182,7 +183,7 @@ def init(opts, conf):
                 os.chmod(brenda_ssh_ident_fn, 0600)
                 with open(brenda_ssh_ident_fn, 'w') as f:
                     f.write(keypair.material)
-        except Exception, e:
+        except Exception:
             logging.exception("Failed creating ssh key pair")
 
     # create security group
@@ -195,7 +196,7 @@ def init(opts, conf):
             ec2.create_tags(sg.id, dict(opts.tags))
             sg.authorize('tcp', 22, 22, '0.0.0.0/0')  # ssh
             sg.authorize('icmp', -1, -1, '0.0.0.0/0') # all ICMP
-        except Exception, e:
+        except Exception:
             logging.exception("Failed creating Brenda security group")
 
 def reset_keys(opts, conf):
@@ -211,7 +212,7 @@ def reset_keys(opts, conf):
             if os.path.exists(brenda_ssh_ident_fn):
                 logging.info("Removing local ssh identity %r.", brenda_ssh_ident_fn)
                 os.remove(brenda_ssh_ident_fn)
-        except Exception, e:
+        except Exception:
             logging.exception("Failed removing ssh key pair")
 
     # remove security group
@@ -220,7 +221,7 @@ def reset_keys(opts, conf):
             sec_group = conf.get("SECURITY_GROUP", "brenda")
             logging.info("Removing Brenda security group %r", sec_group)
             ec2.delete_security_group(name=sec_group)
-        except Exception, e:
+        except Exception:
             logging.exception("Failed removing Brenda security group")
 
 def startup_script(opts, conf, istore_dev):
