@@ -1,0 +1,11 @@
+#!/opt/local/bin/bash
+# Push more work to test brenda-node while in poll mode.
+# This time use a task size of 2.
+set -eu
+
+declare -r SCRIPTPATH=$(realpath "$0")
+declare -r SCRIPTDIR=$(dirname "$SCRIPTPATH")
+declare -r ROOT="$(realpath "$SCRIPTDIR/../..")"
+
+export BRENDA_CONFIG="$ROOT/test/brenda.conf"
+"$ROOT/brenda-work" --start 11 --end 20 --task-size 2 --task-script "$ROOT/test/task-script" push

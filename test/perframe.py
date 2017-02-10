@@ -23,14 +23,14 @@ parser.add_option("-j", "--step", type="int", dest="step",
 ( opts, args ) = parser.parse_args()
 
 # generate test tmpfile
-fn = os.path.join(os.environ['TMP'], "info.tmp")
+fn = os.path.join(os.environ['TMPDIR'], "info.tmp")
 with open(fn, 'w') as f:
     f.write("start=%d end=%d step=%d pause=%d out=%s\n" % (opts.start, opts.end, opts.step, opts.pause, opts.out))
 
 for i in xrange(opts.start, opts.end+1, opts.step):
     # generate fake frame
     fn = opts.out.replace("######", "%06d") % (i,) + '.txt'
-    print fn
+    # print fn
     with open(fn, 'w') as f:
         f.write("This is a test, frame #%d\n" % (i,))
     time.sleep(opts.pause)

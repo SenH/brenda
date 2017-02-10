@@ -1,0 +1,37 @@
+#!/opt/local/bin/bash
+set -eu
+
+# http://stackoverflow.com/questions/9080431/how-execute-bash-script-line-by-line
+# set -x
+# trap read debug
+
+declare -r SCRIPTPATH=$(realpath "$0")
+declare -r SCRIPTDIR=$(dirname "$SCRIPTPATH")
+declare -r ROOT="$(realpath "$SCRIPTDIR/../..")"
+
+declare -r WORK_DIR="${TMPDIR}brenda-work"
+export RENDER_OUTPUT="s3://sh-brenda"
+export BRENDA_CONFIG="$ROOT/test/brenda.conf"
+
+# Compile paracurl
+if test ! -f "$ROOT/paracurl.so"
+then
+	echo 'Compile paracurl'
+	declare -r BUILD_DIR="$ROOT/build"
+	python "$ROOT/setup.py" --with-paracurl build
+	cp -av "$BUILD_DIR/lib."*"/paracurl.so" "$ROOT"
+	rm -rf "$BUILD_DIR"
+fi
+
+# Setup work dir
+rm -rvf "$WORK_DIR"
+mkdir -pv "$WORK_DIR"
+cp -av "$ROOT/test/perframe.py" "$WORK_DIR"
+
+# Setup render output
+aws s3 rm "$RENDER_OUTPUT" --recursive
+
+# Run Brenda
+"$ROOT/brenda-work" reset
+"$ROOT/brenda-work" --end 10 --task-script "$ROOT/test/task-script" push
+"$ROOT/brenda-node" -c "$BRENDA_CONFIG"
