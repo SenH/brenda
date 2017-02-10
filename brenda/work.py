@@ -77,19 +77,36 @@ def push(opts, args, conf):
     # get work queue
     q = None
     if not opts.dry_run:
-        q = aws.create_sqs_queue(conf)
+        aws.create_sqs_queue(conf)
+        q, conn = aws.get_sqs_conn_queue(conf)
+        logging.debug(conn.get_queue_attributes(q, 'QueueArn')['QueueArn']);
+
 
     # push work queue to sqs
-    i = 1
+    i = 0
+    j = 0
+    batch = []
+    tasklist_last_index = len(tasklist)-1
     for task in tasklist:
-        logging.info("Creating task %d: %s", i, task.replace("\n"," "))
-        i = (i + 1)
-        if q is not None:
-            attr = {"script_name": {"data_type": "String", "string_value": os.path.basename(opts.task_script)}}
-            aws.write_sqs_queue(task, q, attr)
+        i += 1
+        j += 1
+        logging.debug("Creating task #%04d: %s", j, task.replace("\n"," "))
+        attr = {"script_name": {"data_type": "String", "string_value": os.path.basename(opts.task_script)}}
+        batch.append((str(i), task, 0, attr))
+
+        # Deliver up to 10 messages in a single request
+        # http://boto.cloudhackers.com/en/latest/ref/sqs.html#boto.sqs.queue.Queue.write_batch
+        if i%10 == 0 or tasklist.index(task) == tasklist_last_index:
+            if q is not None and not opts.dry_run:
+                logging.info('Queueing tasks %d of %d', j, tasklist_last_index+1)
+                aws.write_batch_sqs_queue(batch, q)
+            del batch[:]
+            i = 0
 
 def status(opts, args, conf):
-    q = aws.get_sqs_queue(conf)
+    q, conn = aws.get_sqs_conn_queue(conf)
+    logging.debug(conn.get_queue_attributes(q, 'QueueArn')['QueueArn']);
+
     if q is not None:
         logging.info("%d tasks queued", q.count())
     else:
@@ -97,6 +114,8 @@ def status(opts, args, conf):
 
 def reset(opts, args, conf):
     q, conn = aws.get_sqs_conn_queue(conf)
+    logging.debug(conn.get_queue_attributes(q, 'QueueArn')['QueueArn']);
+
     if q:
         if opts.hard:
             logging.info('Deleting queue %s', aws.get_sqs_work_queue_name(conf))

@@ -140,9 +140,13 @@ def get_sqs_work_queue_name(conf):
 
 def create_sqs_queue(conf):
     visibility_timeout = int(conf.get('VISIBILITY_TIMEOUT', '120'))
+    message_retention = int(conf.get('MESSAGE_RETENTION', '1209600')) # 14 days
     qname = get_sqs_work_queue_name(conf)
+
     conn = get_sqs_conn(conf)
-    return conn.create_queue(qname, visibility_timeout=visibility_timeout)
+    queue = conn.create_queue(qname, visibility_timeout=visibility_timeout)
+    conn.set_queue_attribute(queue, 'MessageRetentionPeriod', message_retention)
+    return queue
 
 def get_sqs_conn_queue(conf):
     qname = get_sqs_work_queue_name(conf)
@@ -158,6 +162,9 @@ def write_sqs_queue(string, queue, attributes=None):
     if isinstance(attributes, dict):
         m.message_attributes = attributes
     queue.write(m)
+
+def write_batch_sqs_queue(messages, queue):
+    return queue.write_batch(messages)
 
 def get_ec2_instances_from_conn(conn, instance_ids=None, filters=None):
     return conn.get_only_instances(instance_ids=instance_ids,filters=filters)
