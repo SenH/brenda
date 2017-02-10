@@ -65,7 +65,7 @@ def s3_push_process(opts, args, conf, outdir):
 def run_tasks(opts, args, conf):
     def write_done_file():
         with open(os.path.join(work_dir, "DONE"), "w") as f:
-            f.write(aws.get_done(opts, conf)+'\n')
+            f.write(get_done(opts, conf)+'\n')
 
     def read_done_file():
         try:
@@ -73,7 +73,7 @@ def run_tasks(opts, args, conf):
                 ret = f.readline().strip()
         except:
             ret = 'exit'
-        aws.validate_done(ret)
+        validate_done(ret)
         return ret
 
     def task_complete_accounting(task_count):
@@ -185,7 +185,7 @@ def run_tasks(opts, args, conf):
                     script = script.replace('$OUTDIR', task.outdir)
 
                     # cd to project directory, where we will run render task from
-                    with utils.Cd(proj_dir) as cd:
+                    with utils.Cd(proj_dir):
                         # write script file and make it executable
                         script_fn = "./{}".format(task.script_name)
                         with open(script_fn, 'w') as f:
@@ -297,7 +297,7 @@ def run_tasks(opts, args, conf):
     signal.signal(signal.SIGTERM, signal_handler)
 
     # get configuration parameters
-    work_dir = aws.get_work_dir(conf)
+    work_dir = utils.get_work_dir(conf)
     visibility_timeout_reassert = int(conf.get('VISIBILITY_TIMEOUT_REASSERT', '30'))
     visibility_timeout = int(conf.get('VISIBILITY_TIMEOUT', '120'))
 
@@ -329,9 +329,6 @@ def run_tasks(opts, args, conf):
     # directory that render task will be run from
     proj_dir = get_project(conf, render_project)
     logging.info('Project folder: %s', proj_dir)
-
-    # mount additional EBS volumes
-    aws.mount_additional_ebs(conf, proj_dir)
 
     # continue only if we are not in "dry-run" mode
     if not opts.dry_run:
@@ -374,7 +371,7 @@ def get_s3_project(conf, s3url, proj_dir):
     utils.mkdir(new_dir)
 
     try:
-        with utils.Cd(new_dir) as cd:
+        with utils.Cd(new_dir):
             # download the file from S3
             file_len, etag = aws.s3_get(conf, s3url, fn, etag=etag)
 
@@ -410,13 +407,23 @@ def get_project(conf, url):
             raise ValueError("%s does not point to a directory" % (url,))
         return path
     else:
-        work_dir = aws.get_work_dir(conf)
-        ebs_snap = aws.project_ebs_snapshot(conf)
-        if ebs_snap:
-            proj_dir = os.path.join(work_dir, "brenda-project.mount")
-            dev = utils.blkdev(0, mount_form=True)
-            utils.mount(dev, proj_dir)
-        else:
-            proj_dir = os.path.join(work_dir, "brenda-project.tmp")
-            get_s3_project(conf, url, proj_dir)
+        proj_dir = os.path.join(utils.get_work_dir(conf), "brenda-project.tmp")
+        get_s3_project(conf, url, proj_dir)
         return utils.top_dir(proj_dir)
+
+def validate_done(d):
+    done_choices = ('exit', 'shutdown', 'poll')
+    if d not in done_choices:
+        raise ValueError("DONE config var must be one of %r" % (done_choices,))
+
+def get_done(opts, conf):
+    if getattr(opts, 'shutdown', False):
+        return 'shutdown'
+    else:
+        d = conf.get('DONE')
+        if d:
+            validate_done(d)
+            return d
+        else:
+            sd = int(conf.get('SHUTDOWN', '0'))
+            return 'shutdown' if sd else 'exit'

@@ -35,5 +35,5 @@ aws s3 rm "$RENDER_OUTPUT" --recursive
 "$ROOT/brenda-work" reset
 "$ROOT/brenda-work" status
 
-# "$ROOT/brenda-work" --end 10 --task-script "$ROOT/test/tasks/task-perframe" push
+"$ROOT/brenda-work" --end 10 --task-script "$ROOT/test/tasks/task-perframe" push
 "$ROOT/brenda-node" -c "$BRENDA_CONFIG"

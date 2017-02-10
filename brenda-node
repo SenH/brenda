@@ -35,8 +35,6 @@ Required config vars:
                     or any format supported by tar, i.e.
                     s3://BUCKET/myproject.zip, or local directory on render
                     farm node i.e. file:///my/local/render/project.
-                    May also be an EBS snapshot, i.e. ebs://snap-66c5dd62
-                    or ebs://my-snapshot-name
   WORK_QUEUE : name of SQS queue (e.g. sqs://QUEUE) containing render
                work.
   RENDER_OUTPUT : render farm will save render output to this S3 bucket/prefix,
@@ -70,9 +68,6 @@ Optional config vars:
              directory.
   RUNNING_ON_EC2 : boolean (0|1, default=1) that indicates if we are running
                    on an EC2 instance.
-  ADDITIONAL_EBS_0, ADDITIONAL_EBS_1, ... : Additional EBS snapshots that
-    were attached to the instance and should be mounted before render task is
-    started.  See brenda-run documentation for more info on this feature.
   DONE : what to do when render job is complete, choices are:
          'shutdown' -- terminate the instance
          'poll'     -- continue to poll the work queue for new tasks

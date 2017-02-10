@@ -17,7 +17,6 @@
 import os, sys, time, datetime, calendar, urllib2, logging
 import boto, boto.sqs, boto.s3, boto.ec2
 import boto.utils
-from brenda import utils
 from brenda.error import ValueErrorRetry
 
 def aws_creds(conf):
@@ -167,30 +166,6 @@ def get_ec2_instances(conf, instance_ids=None, filters=None):
     conn = get_ec2_conn(conf)
     return get_ec2_instances_from_conn(conn, instance_ids, filters)
 
-def get_snapshots(conf):
-    conn = get_ec2_conn(conf)
-    return conn.get_all_snapshots(owner='self')
-
-def get_volumes(conf):
-    conn = get_ec2_conn(conf)
-    return conn.get_all_volumes()
-
-def find_snapshot(snapshots, name):
-    for s in snapshots:
-        try:
-            if s.tags['Name'] == name:
-                return s.id
-        except:
-            pass
-
-def find_volume(volumes, name):
-    for v in volumes:
-        try:
-            if v.tags['Name'] == name:
-                return v.id
-        except:
-            pass
-
 def format_uptime(sec):
     return str(datetime.timedelta(seconds=sec))
 
@@ -277,91 +252,6 @@ def get_adaptive_ssh_identity_fn(opts, conf):
             raise ValueError("No ssh private key exists, did you run 'brenda-run init'?")
     return fn
 
-def parse_ebs_url(key):
-    if key and key.startswith("ebs://"):
-        return key[6:]
-
-def project_ebs_snapshot(conf):
-    return parse_ebs_url(conf.get('RENDER_PROJECT'))
-
-def translate_snapshot_name(conf, snap_name, snapshots=None):
-    if snap_name:
-        if snap_name.startswith('snap-'):
-            return snap_name
-        else:
-            if snapshots is None:
-                snapshots = get_snapshots(conf)
-            n = find_snapshot(snapshots, snap_name)
-            if not n or not n.startswith('snap-'):
-                raise ValueError("snapshot not found: %r" % (snap_name,))
-            return n
-
-def translate_volume_name(conf, vol_name, volumes=None):
-    if vol_name:
-        if vol_name.startswith('vol-'):
-            return vol_name
-        else:
-            if volumes is None:
-                volumes = get_volumes(conf)
-            n = find_volume(volumes, vol_name)
-            if not n or not n.startswith('vol-'):
-                raise ValueError("volume not found: %r" % (vol_name,))
-            return n
-
-def get_work_dir(conf):
-    work_dir = os.path.realpath(conf.get('WORK_DIR', '.'))
-    if not os.path.isdir(work_dir):
-        utils.makedirs(work_dir)
-    return work_dir
-
-def add_instance_store(opts, conf, bdm, itype):
-    if not itype.startswith('t1.'):
-        dev = utils.blkdev(0, istore=True)
-        bdm[dev] = boto.ec2.blockdevicemapping.EBSBlockDeviceType(ephemeral_name='ephemeral0')
-        return dev
-
-def additional_ebs_iterator(conf):
-    i = 0
-    while True:
-        key = "ADDITIONAL_EBS_%d" % (i,)
-        if key in conf:
-            yield key
-        else:
-            break
-        i += 1
-
-def blk_dev_map(opts, conf, itype, snapshots):
-    if not int(conf.get('NO_EBS', '0')):
-        bdm = boto.ec2.blockdevicemapping.BlockDeviceMapping()
-        snap = project_ebs_snapshot(conf)
-        snap_id = translate_snapshot_name(conf, snap, snapshots)
-        snap_description = []
-        if snap_id:
-            dev = utils.blkdev(0)
-            bdm[dev] = boto.ec2.blockdevicemapping.EBSBlockDeviceType(snapshot_id=snap_id, delete_on_termination=True)
-            snap_description.append((snap, snap_id, dev))
-        i = 0
-        for k in additional_ebs_iterator(conf):
-            i += 1
-            snap = parse_ebs_url(conf[k].split(',')[0])
-            snap_id = translate_snapshot_name(conf, snap, snapshots)
-            if snap_id:
-                dev = utils.blkdev(i)
-                bdm[dev] = boto.ec2.blockdevicemapping.EBSBlockDeviceType(snapshot_id=snap_id, delete_on_termination=True)
-                snap_description.append((snap, snap_id, dev))
-        istore_dev = add_instance_store(opts, conf, bdm, itype)
-        return bdm, snap_description, istore_dev
-    else:
-        return None, None, None
-
-def mount_additional_ebs(conf, proj_dir):
-    i = 0
-    for k in additional_ebs_iterator(conf):
-        i += 1
-        dir = os.path.realpath(os.path.join(proj_dir, conf[k].split(',')[1]))
-        dev = utils.blkdev(i, mount_form=True)
-        utils.mount(dev, dir)
-
 def get_instance_id_self():
     req = urllib2.Request("http://169.254.169.254/latest/meta-data/instance-id")
     response = urllib2.urlopen(req)
@@ -394,30 +284,6 @@ def cancel_spot_requests_from_instance_ids(conn, instance_ids, dry_run=False):
     logging.info('Cancel spot request: %s', sirs)
     if sirs:
         conn.cancel_spot_instance_requests(request_ids=sirs,dry_run=dry_run)
-
-def config_file_name():
-    config = os.environ.get("BRENDA_CONFIG")
-    if not config:
-        home = os.path.expanduser("~")
-        config = os.path.join(home, ".brenda.conf")
-    return config
-
-def validate_done(d):
-    done_choices = ('exit', 'shutdown', 'poll')
-    if d not in done_choices:
-        raise ValueError("DONE config var must be one of %r" % (done_choices,))
-
-def get_done(opts, conf):
-    if getattr(opts, 'shutdown', False):
-        return 'shutdown'
-    else:
-        d = conf.get('DONE')
-        if d:
-            validate_done(d)
-            return d
-        else:
-            sd = int(conf.get('SHUTDOWN', '0'))
-            return 'shutdown' if sd else 'exit'
 
 def get_filter_tags(tags):
     return dict(map(lambda (key, value): ('tag:'+key, value), tags.items()))

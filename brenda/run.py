@@ -15,103 +15,51 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os, time, logging
-from brenda import aws, utils
+from brenda import aws, node, utils
 
 def demand(opts, conf):
-    ami_id = utils.get_opt(opts.ami, conf, 'AMI_ID', must_exist=True)
-    itype = brenda_instance_type(opts, conf)
-    snapshots = aws.get_snapshots(conf)
-    bdm, snap_description, istore_dev = aws.blk_dev_map(opts, conf, itype, snapshots)
-    script = startup_script(opts, conf, istore_dev)
-    user_data = None
-    if not opts.idle:
-        user_data = script
-    ssh_key_name = conf.get("SSH_KEY_NAME", "brenda")
-    sec_groups = (conf.get("SECURITY_GROUP", "brenda"),)
     run_args = {
-        'image_id'      : ami_id,
+        'image_id'      : utils.get_opt(opts.ami, conf, 'AMI_ID', must_exist=True),
         'max_count'     : opts.n_instances,
-        'instance_type' : itype,
-        'user_data'     : user_data,
-        'key_name'      : ssh_key_name,
-        'security_groups' : sec_groups,
-        'block_device_map' : bdm,
+        'instance_type' : utils.get_opt(opts.instance_type, conf, 'INSTANCE_TYPE', must_exist=True),
+        'user_data'     : startup_script(opts, conf) if opts.idle else None,
+        'key_name'      : conf.get("SSH_KEY_NAME", "brenda"),
+        'security_groups' : [conf.get("SECURITY_GROUP", "brenda")],
         'dry_run'       : opts.dry_run,
         }
-
-    print "----------------------------"
-    print "AMI ID:", ami_id
-    print "Instance type:", itype
-    print "Max instances:", opts.n_instances
-    if snap_description:
-        print "Project EBS snapshot:", snap_description
-    if istore_dev:
-        print "Instance store device:", istore_dev
-    print "SSH key name:", ssh_key_name
-    print "Security groups:", sec_groups
-    print_script(opts, script)
-    aws.get_done(opts, conf) # sanity check on DONE var
+    logging.debug('Instance parameters: %s', run_args)
+    node.get_done(opts, conf) # sanity check on DONE var
 
     # Request instances
     ec2 = aws.get_ec2_conn(conf)
-    logging.debug('Instance parameters: %s', run_args)
     reservation = ec2.run_instances(**run_args)
-    if not opts.dry_run:
-        logging.info(reservation)
-        tag_demand_resources(conf, reservation, dict(opts.tags))
+    logging.info(reservation)
+    if not opts.dry_run: tag_demand_resources(conf, reservation, dict(opts.tags))
 
 def spot(opts, conf):
-    ami_id = utils.get_opt(opts.ami, conf, 'AMI_ID', must_exist=True)
-    price = utils.get_opt(opts.price, conf, 'BID_PRICE', must_exist=True)
-    reqtype = 'persistent' if opts.persistent else 'one-time'
-    itype = brenda_instance_type(opts, conf)
-    snapshots = aws.get_snapshots(conf)
-    bdm, snap_description, istore_dev = aws.blk_dev_map(opts, conf, itype, snapshots)
-    script = startup_script(opts, conf, istore_dev)
-    user_data = None
-    if not opts.idle:
-        user_data = script
-    ssh_key_name = conf.get("SSH_KEY_NAME", "brenda")
-    sec_groups = (conf.get("SECURITY_GROUP", "brenda"),)
     run_args = {
-        'image_id'      : ami_id,
-        'price'         : price,
-        'type'          : reqtype,
+        'image_id'      : utils.get_opt(opts.ami, conf, 'AMI_ID', must_exist=True),
+        'price'         : utils.get_opt(opts.price, conf, 'BID_PRICE', must_exist=True),
+        'type'          : 'persistent' if opts.persistent else 'one-time',
         'count'         : opts.n_instances,
-        'instance_type' : itype,
-        'user_data'     : user_data,
-        'key_name'      : ssh_key_name,
-        'security_groups' : sec_groups,
-        'block_device_map' : bdm,
+        'instance_type' : utils.get_opt(opts.instance_type, conf, 'INSTANCE_TYPE', must_exist=True),
+        'user_data'     : startup_script(opts, conf) if opts.idle else None,
+        'key_name'      : conf.get("SSH_KEY_NAME", "brenda"),
+        'security_groups' : [conf.get("SECURITY_GROUP", "brenda")],
         'dry_run'       : opts.dry_run,
         }
-
-    print "----------------------------"
-    print "AMI ID:", ami_id
-    print "Max bid price", price
-    print "Request type:", reqtype
-    print "Instance type:", itype
-    print "Instance count:", opts.n_instances
-    if snap_description:
-        print "Project EBS snapshot:", snap_description
-    if istore_dev:
-        print "Instance store device:", istore_dev
-    print "SSH key name:", ssh_key_name
-    print "Security groups:", sec_groups
-    print_script(opts, script)
-    aws.get_done(opts, conf) # sanity check on DONE var
+    logging.debug('Instance parameters: %s', run_args)
+    node.get_done(opts, conf) # sanity check on DONE var
 
     # Request spot instances
     ec2 = aws.get_ec2_conn(conf)
-    logging.debug('Instance parameters: %s', run_args)
     reservation = ec2.request_spot_instances(**run_args)
-    if not opts.dry_run:
-        logging.info(reservation)
-        tag_spot_resources(conf, reservation, dict(opts.tags))
+    logging.info(reservation)
+    if not opts.dry_run: tag_spot_resources(conf, reservation, dict(opts.tags))
 
 def price(opts, conf):
     ec2 = aws.get_ec2_conn(conf)
-    itype = brenda_instance_type(opts, conf)
+    itype = utils.get_opt(opts.instance_type, conf, 'INSTANCE_TYPE', must_exist=True)
     data = {}
     for item in ec2.get_spot_price_history(instance_type=itype, product_description="Linux/UNIX"):
         # show the most recent price for each availability zone
@@ -132,7 +80,7 @@ def stop(opts, conf):
 
 def cancel(opts, conf):
     ec2 = aws.get_ec2_conn(conf)
-    requests = aws.get_all_spot_instance_requests(opts, conf,  {'state': ['open', 'active']})
+    requests = aws.get_all_spot_instance_requests(opts, conf, {'state': ['open', 'active']})
     requests = [r.id for r in requests]
     logging.info('Cancel %s', requests)
     ec2.cancel_spot_instance_requests(requests, opts.dry_run)
@@ -151,13 +99,6 @@ def status(opts, conf):
         print "Active Spot Requests"
     for r in requests:
         print "  %s %s %s %s $%s %s %s %s" % (r.id, r.region, r.type, r.create_time, r.price, r.state, r.status, r.tags)
-
-def script(opts, conf):
-    itype = brenda_instance_type(opts, conf)
-    snapshots = aws.get_snapshots(conf)
-    bdm, snap_description, istore_dev = aws.blk_dev_map(opts, conf, itype, snapshots)
-    script = startup_script(opts, conf, istore_dev)
-    print script
 
 def init(opts, conf):
     ec2 = aws.get_ec2_conn(conf)
@@ -224,44 +165,16 @@ def reset_keys(opts, conf):
         except Exception:
             logging.exception("Failed removing Brenda security group")
 
-def startup_script(opts, conf, istore_dev):
-    login_dir = "/root"
-
-    head = "#!/bin/bash\n"
-
-    # use EC2 instance store on render farm instance?
-    use_istore = int(conf.get('USE_ISTORE', '1' if istore_dev else '0'))
-
-    if use_istore:
-        # script to start brenda-node running
-        # on the EC2 instance store
-        iswd = conf.get('WORK_DIR', '/mnt/brenda')
-        if iswd != login_dir:
-            head += """\
-# run Brenda on the EC2 instance store volume
-B="%s"
-if ! [ -d "$B" ]; then
-  for f in brenda.pid log task_count task_last DONE ; do
-    ln -s "$B/$f" "%s/$f"
-  done
-fi
-export BRENDA_WORK_DIR="."
-mkdir -p "$B"
-cd "$B"
-""" % (iswd, login_dir)
-        else:
-            head += 'cd "%s"\n' % (login_dir,)
-    else:
-        head += 'cd "%s"\n' % (login_dir,)
-
-    head += "/usr/local/bin/brenda-node --daemon <<EOF\n"
+def startup_script(opts, conf):
+    head = "#!/bin/bash\n/usr/local/bin/brenda-node --daemon <<EOF\n"
     tail = "EOF\n"
     keys = [
         'AWS_ACCESS_KEY',
         'AWS_SECRET_KEY',
         'RENDER_PROJECT',
         'WORK_QUEUE',
-        'RENDER_OUTPUT'
+        'WORK_DIR',
+        'RENDER_OUTPUT',
         ]
     optional_keys = [
         "S3_REGION",
@@ -275,10 +188,9 @@ cd "$B"
         "ERROR_PAUSE",
         "RESET_PERIOD",
         "RENDER_PROJECT_ALWAYS_REFETCH",
-        "WORK_DIR",
         "SHUTDOWN",
         "DONE"
-        ] + list(aws.additional_ebs_iterator(conf))
+        ]
 
     script = head
     for k in keys:
@@ -287,26 +199,11 @@ cd "$B"
             raise ValueError("config key %r must be defined" % (k,))
         script += "%s=%s\n" % (k, v)
     for k in optional_keys:
-        if k == "WORK_DIR" and use_istore:
-            continue
         v = conf.get(k)
         if v:
             script += "%s=%s\n" % (k, v)
     script += tail
     return script
-
-def print_script(opts, script):
-    if not opts.idle:
-        print "Startup Script:"
-        for line in script.splitlines():
-            for redact in ('AWS_ACCESS_KEY=', 'AWS_SECRET_KEY='):
-                if line.startswith(redact):
-                    line = redact + "[redacted]"
-                    break
-            print '  ', line
-
-def brenda_instance_type(opts, conf):
-    return utils.get_opt(opts.instance_type, conf, 'INSTANCE_TYPE', default="m2.xlarge")
 
 def tag_demand_resources(conf, reservation, tags):
     """

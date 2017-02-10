@@ -16,6 +16,19 @@
 
 import os, subprocess, shutil, logging
 
+def config_file_name():
+    config = os.environ.get("BRENDA_CONFIG")
+    if not config:
+        home = os.path.expanduser("~")
+        config = os.path.join(home, ".brenda.conf")
+    return config
+
+def get_work_dir(conf):
+    work_dir = os.path.realpath(conf.get('WORK_DIR', '.'))
+    if not os.path.isdir(work_dir):
+        makedirs(work_dir)
+    return work_dir
+
 def system(cmd, ignore_errors=False):
     logging.info('Execute command: %s', cmd)
     succeed = 0
@@ -60,32 +73,6 @@ def str_nl(s):
     if len(s) > 0 and s[-1] != '\n':
         s += '\n'
     return s
-
-def blkdev(index, istore=False, mount_form=False):
-    if istore:
-        # instance store
-        devs = ('b', 'c', 'd', 'e')
-    else:
-        # EBS
-        devs = (
-            'f1', 'g1', 'h1', 'i1', 'j1', 'k1', 'l1', 'm1', 'n1', 'o1', 'p1',
-            'f2', 'g2', 'h2', 'i2', 'j2', 'k2', 'l2', 'm2', 'n2', 'o2', 'p2',
-            'f3', 'g3', 'h3', 'i3', 'j3', 'k3', 'l3', 'm3', 'n3', 'o3', 'p3',
-            'f4', 'g4', 'h4', 'i4', 'j4', 'k4', 'l4', 'm4', 'n4', 'o4', 'p4',
-            'f5', 'g5', 'h5', 'i5', 'j5', 'k5', 'l5', 'm5', 'n5', 'o5', 'p5',
-            'f6', 'g6', 'h6', 'i6', 'j6', 'k6', 'l6', 'm6', 'n6', 'o6', 'p6',
-            )
-    if mount_form:
-        return '/dev/xvd' + devs[index]
-    else:
-        return '/dev/sd' + devs[index]
-
-def mount(dev, dir, mkfs=False):
-    if not os.path.isdir(dir):
-        mkdir(dir)
-        if mkfs:
-            system(["/sbin/mkfs", "-t", "ext4", dev])
-        system(["/bin/mount", dev, dir])
 
 def top_dir(dir):
     """

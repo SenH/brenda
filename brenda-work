@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, os, optparse
-from brenda import config, work, aws, version, utils
+import sys, optparse
+from brenda import config, work, version, utils
 
 def main():
     usage = """"\
@@ -56,9 +56,7 @@ Examples:
 
     parser = optparse.OptionParser(usage)
 
-    defconf = aws.config_file_name()
-
-    parser.add_option("-c", "--config", dest="config", default=defconf, metavar="FILE",
+    parser.add_option("-c", "--config", dest="config", default=utils.config_file_name(), metavar="FILE",
                       help="Configuration file (default: %default)")
     parser.add_option("-l", "--logfile", dest="logfile", metavar="FILE",
                       help="Save log to file")

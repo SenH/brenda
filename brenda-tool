@@ -18,7 +18,7 @@
 
 import sys, optparse
 import boto
-from brenda import aws, config, error, tool, version, utils
+from brenda import config, error, tool, version, utils
 
 def main():
     usage = """\
@@ -79,9 +79,7 @@ Examples:
     parser = optparse.OptionParser(usage)
     parser.disable_interspersed_args()
 
-    defconf = aws.config_file_name()
-
-    parser.add_option("-c", "--config", dest="config", default=defconf, metavar="FILE",
+    parser.add_option("-c", "--config", dest="config", default=utils.config_file_name(), metavar="FILE",
                       help="Configuration file (default: %default)")
     parser.add_option("-l", "--logfile", dest="logfile", metavar="FILE",
                       help="Save log to file")
