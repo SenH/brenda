@@ -166,7 +166,7 @@ def reset_keys(opts, conf):
             logging.exception("Failed removing Brenda security group")
 
 def startup_script(opts, conf):
-    head = "#!/bin/bash\n/usr/local/bin/brenda-node --daemon <<EOF\n"
+    head = "#!/usr/bin/env bash\n/usr/local/bin/brenda-node --daemon <<EOF\n"
     tail = "EOF\n"
     keys = [
         'AWS_ACCESS_KEY',

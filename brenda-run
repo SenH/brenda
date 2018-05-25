@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Brenda -- Render farm tool for Amazon Web Services
 # Copyright (C) 2013 James Yonan <james@openvpn.net>
