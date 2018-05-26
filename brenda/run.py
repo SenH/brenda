@@ -19,13 +19,14 @@ from brenda import aws, node, utils
 
 def demand(opts, conf):
     run_args = {
-        'image_id'      : utils.get_opt(opts.ami, conf, 'AMI_ID', must_exist=True),
-        'max_count'     : opts.n_instances,
-        'instance_type' : utils.get_opt(opts.instance_type, conf, 'INSTANCE_TYPE', must_exist=True),
-        'user_data'     : startup_script(opts, conf) if opts.idle else None,
-        'key_name'      : conf.get("SSH_KEY_NAME", "brenda"),
-        'security_groups' : [conf.get("SECURITY_GROUP", "brenda")],
-        'dry_run'       : opts.dry_run,
+        'image_id'              : utils.get_opt(opts.ami, conf, 'AMI_ID', must_exist=True),
+        'max_count'             : opts.n_instances,
+        'instance_type'         : utils.get_opt(opts.instance_type, conf, 'INSTANCE_TYPE', must_exist=True),
+        'instance_profile_name' : utils.get_opt(opts.instance_profile, conf, 'INSTANCE_PROFILE'),
+        'user_data'             : startup_script(opts, conf) if not opts.idle else None,
+        'key_name'              : conf.get("SSH_KEY_NAME", "brenda"),
+        'security_groups'       : [conf.get("SECURITY_GROUP", "brenda")],
+        'dry_run'               : opts.dry_run,
         }
     logging.debug('Instance parameters: %s', run_args)
     node.get_done(opts, conf) # sanity check on DONE var
@@ -38,15 +39,16 @@ def demand(opts, conf):
 
 def spot(opts, conf):
     run_args = {
-        'image_id'      : utils.get_opt(opts.ami, conf, 'AMI_ID', must_exist=True),
-        'price'         : utils.get_opt(opts.price, conf, 'BID_PRICE', must_exist=True),
-        'type'          : 'persistent' if opts.persistent else 'one-time',
-        'count'         : opts.n_instances,
-        'instance_type' : utils.get_opt(opts.instance_type, conf, 'INSTANCE_TYPE', must_exist=True),
-        'user_data'     : startup_script(opts, conf) if opts.idle else None,
-        'key_name'      : conf.get("SSH_KEY_NAME", "brenda"),
-        'security_groups' : [conf.get("SECURITY_GROUP", "brenda")],
-        'dry_run'       : opts.dry_run,
+        'image_id'              : utils.get_opt(opts.ami, conf, 'AMI_ID', must_exist=True),
+        'price'                 : utils.get_opt(opts.price, conf, 'BID_PRICE', must_exist=True),
+        'type'                  : 'persistent' if opts.persistent else 'one-time',
+        'count'                 : opts.n_instances,
+        'instance_type'         : utils.get_opt(opts.instance_type, conf, 'INSTANCE_TYPE', must_exist=True),
+        'instance_profile_name' : utils.get_opt(opts.instance_profile, conf, 'INSTANCE_PROFILE'),
+        'user_data'             : startup_script(opts, conf) if not opts.idle else None,
+        'key_name'              : conf.get("SSH_KEY_NAME", "brenda"),
+        'security_groups'       : [conf.get("SECURITY_GROUP", "brenda")],
+        'dry_run'               : opts.dry_run,
         }
     logging.debug('Instance parameters: %s', run_args)
     node.get_done(opts, conf) # sanity check on DONE var
