@@ -61,7 +61,7 @@ def mv(src, dest):
 
 def shutdown():
     logging.info('Shutdown system')
-    system(["/sbin/shutdown", "-h", "0"])
+    system(["sudo", "/sbin/shutdown", "-h", "0"])
 
 def write_atomic(path, data):
     tmp = path + '.tmp'
