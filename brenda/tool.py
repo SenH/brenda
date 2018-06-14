@@ -24,7 +24,7 @@ def instances(opts, conf):
         print i.state, i.image_id, aws.format_uptime(uptime), i.public_dns_name, i.tags
 
 def ssh_args(opts, conf):
-    user = utils.get_opt(opts.user, conf, 'AWS_USER', default='root')
+    user = utils.get_opt(opts.user, conf, 'AMI_USER', default='root')
     args = ['ssh', '-o', 'UserKnownHostsFile=/dev/null',
                    '-o', 'StrictHostKeyChecking=no',
                    '-o', 'LogLevel=quiet']

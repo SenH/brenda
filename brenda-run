@@ -66,6 +66,7 @@ Optional config vars:
               as a config variable.
   SSH_KEY_NAME : EC2 ssh key name, default='brenda'
   SECURITY_GROUP : EC2 security group, default='brenda'
+  AMI_USER : username when accessing EC2 node.
   [Note: all optional vars supported by brenda-node can also be specified here]
 Examples:
   Show current running EC2 instances and spot requests.

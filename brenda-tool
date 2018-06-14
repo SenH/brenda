@@ -51,7 +51,7 @@ Optional config vars:
   SSH_IDENTITY   : SSH identity file to access EC2 nodes, defaults to
                    $HOME/.ssh/id_rsa
   EC2_REGION : EC2 region name, defaults to US standard (optional).
-  AWS_USER : username when accessing AWS node (optional).
+  AMI_USER : username when accessing EC2 node (optional).
   TOOL_THREADS : max number of simultaneous threads to use when querying
                  multiple render farm instances (default=64).
   REMOTE_PIDFILE : pid file name used on remote render farm nodes
@@ -87,7 +87,7 @@ Examples:
                       help="Level of events to log (default: INFO)")
 
     parser.add_option("-u", "--user", dest="user",
-                      help="Username to use when logging into remote EC2 nodes, overrides environmental variable AWS_USER")
+                      help="Username to use when logging into remote EC2 nodes, overrides environmental variable AMI_USER")
     parser.add_option("-n", "--host", dest="host",
                       help="ssh/rsync on specific host")
     parser.add_option("-H", "--hosts-file", dest="hosts_file", metavar="FILE",
