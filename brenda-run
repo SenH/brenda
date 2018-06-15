@@ -105,6 +105,11 @@ Examples:
                       help="For stop, terminate EC2 instances instead of stopping them (required for spot instances)")
     parser.add_option("-I", "--idle", action="store_true", dest="idle",
                       help="Start the EC2 instances in the idle state, without automatically running brenda-node to begin task processing")
+
+    parser.add_option("-n", "--host", dest="host",
+                      help="Match on specific host")
+    parser.add_option("-H", "--hosts-file", dest="hosts_file", metavar="FILE",
+                      help="Match on hosts listed in file")
     parser.add_option("-t", "--threshold", type="int", dest="threshold", default=0,
                       help="Match only on instances whose uptime is > n minutes after the hour, default=%default")
     parser.add_option("-m", "--imatch", action="append", dest="imatch", metavar="TYPE",
