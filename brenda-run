@@ -22,7 +22,7 @@ from brenda import config, error, run, version, utils
 
 def main():
     usage = """\
-usage: %s [options] demand|spot|script|price|stop|cancel|status|init|reset-keys
+usage: %s [options] demand|spot|script|price|stop|cancel|status|init|reset
 Version:
   Brenda %s
 Synopsis:
@@ -37,10 +37,8 @@ Commands:
            "brenda-tool prune").
   cancel : cancel all spot requests.
   status : show status of active spot requests and running instances.
-  init   : do one-time initialization of new AWS account by creating
-           "brenda" SSH key name and Security Group.
-  reset-keys  : undo the effects of "init" by deleting "brenda" SSH key
-                name and Security Group.
+  init   : do one-time initialization by creating SSH keys and Security Group.
+  reset  : undo the effects of "init" by deleting SSH keys and Security Group.
 Required config vars:
   AWS_ACCESS_KEY : Amazon Web Services access key.
   AWS_SECRET_KEY : Amazon Web Services secret key.
@@ -115,9 +113,9 @@ Examples:
                       help="Match on specific tags. Option can be specified multiple times.")
 
     parser.add_option("", "--no-ssh-keys", action="store_true", dest="no_ssh_keys",
-                      help="for init/reset-keys, don't create/remove a 'brenda' ssh key pair on AWS")
+                      help="for init/reset, don't create/remove a ssh key pair on AWS")
     parser.add_option("", "--no-security-group", action="store_true", dest="no_security_group",
-                      help="for init/reset-keys, don't create/remove a 'brenda' security group on AWS")
+                      help="for init/reset, don't create/remove a security group on AWS")
 
     parser.add_option("-d", "--dry-run", action="store_true", dest="dry_run",
                       help="show what would be done without actually doing it")
@@ -149,8 +147,8 @@ Examples:
         run.status(opts, conf)
     elif args[0] == 'init':
         run.init(opts, conf)
-    elif args[0] == 'reset-keys':
-        run.reset_keys(opts, conf)
+    elif args[0] == 'reset':
+        run.reset(opts, conf)
     elif args[0] == 'script':
         print run.startup_script(opts, conf)
     else:

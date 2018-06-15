@@ -107,59 +107,48 @@ def init(opts, conf):
 
     # create ssh key pair
     if not opts.no_ssh_keys:
-        try:
-            # get new ssh public key pair from AWS
-            ssh_key_name = conf.get("SSH_KEY_NAME", "brenda")
-            ssh_local_fn = utils.get_local_ssh_id_fn(opts, conf, mkdir=True)
-            logging.info("Creating ssh private key from AWS into %r under %r key pair.", ssh_local_fn, ssh_key_name)
-            keypair = ec2.create_key_pair(key_name=ssh_key_name)
-            with open(ssh_local_fn, 'w') as f:
-                pass
-            os.chmod(ssh_local_fn, 0600)
-            with open(ssh_local_fn, 'w') as f:
-                f.write(keypair.material)
-        except Exception:
-            logging.exception("Failed creating ssh key pair")
+        # get new ssh public key pair from AWS
+        ssh_key_name = conf.get("SSH_KEY_NAME", "brenda")
+        ssh_local_fn = utils.get_local_ssh_id_fn(opts, conf, mkdir=True)
+        logging.info("Creating AWS ssh key pair %r.", ssh_key_name)
+        keypair = ec2.create_key_pair(ssh_key_name, opts.dry_run)
+        with open(ssh_local_fn, 'w') as f:
+            pass
+        os.chmod(ssh_local_fn, 0600)
+        with open(ssh_local_fn, 'w') as f:
+            f.write(keypair.material)
+            logging.info("Created local ssh id in %r from %r key pair.", ssh_local_fn, ssh_key_name)
 
     # create security group
     if not opts.no_security_group:
-        try:
-            sec_group = conf.get("SECURITY_GROUP", "brenda")
-            logging.info("Creating Brenda security group %r", sec_group)
-            sg = ec2.create_security_group(sec_group, 'Brenda security group')
-            logging.debug('Tagging %s with %s', sg, dict(opts.tags))
-            ec2.create_tags(sg.id, dict(opts.tags))
-            sg.authorize('tcp', 22, 22, '0.0.0.0/0')  # ssh
-            sg.authorize('icmp', -1, -1, '0.0.0.0/0') # all ICMP
-        except Exception:
-            logging.exception("Failed creating Brenda security group")
+        sec_group = conf.get("SECURITY_GROUP", "brenda")
+        logging.info("Creating Brenda security group %r", sec_group)
+        sg = ec2.create_security_group(sec_group, 'Brenda security group', dry_run=opts.dry_run)
+        logging.debug('Tagging %s with %s', sg, dict(opts.tags))
+        ec2.create_tags(sg.id, dict(opts.tags))
+        sg.authorize('tcp', 22, 22, '0.0.0.0/0')  # ssh
+        sg.authorize('icmp', -1, -1, '0.0.0.0/0') # all ICMP
 
-def reset_keys(opts, conf):
+def reset(opts, conf):
     ec2 = aws.get_ec2_conn(conf)
 
     # remove ssh keys
     if not opts.no_ssh_keys:
-        try:
-            ssh_key_name = conf.get("SSH_KEY_NAME", "brenda")
-            logging.info("Deleting AWS ssh key pair %r.", ssh_key_name)
-            ec2.delete_key_pair(key_name=ssh_key_name)
-            ssh_local_fn = utils.get_local_ssh_id_fn(opts, conf)
-            if os.path.exists(ssh_local_fn):
-                logging.info("Removing local ssh identity %r.", ssh_local_fn)
-                os.remove(ssh_local_fn)
-            else:
-                logging.info("Local ssh id %r does not exist", ssh_local_fn)
-        except Exception:
-            logging.exception("Failed removing ssh key pair")
+        ssh_key_name = conf.get("SSH_KEY_NAME", "brenda")
+        logging.info("Deleting AWS ssh key pair %r.", ssh_key_name)
+        ec2.delete_key_pair(ssh_key_name, opts.dry_run)
+        ssh_local_fn = utils.get_local_ssh_id_fn(opts, conf)
+        if os.path.exists(ssh_local_fn):
+            logging.info("Removing local ssh id %r.", ssh_local_fn)
+            os.remove(ssh_local_fn)
+        else:
+            logging.info("Local ssh id %r does not exist", ssh_local_fn)
 
     # remove security group
     if not opts.no_security_group:
-        try:
-            sec_group = conf.get("SECURITY_GROUP", "brenda")
-            logging.info("Removing Brenda security group %r", sec_group)
-            ec2.delete_security_group(name=sec_group)
-        except Exception:
-            logging.exception("Failed removing Brenda security group")
+        sec_group = conf.get("SECURITY_GROUP", "brenda")
+        logging.info("Removing Brenda security group %r", sec_group)
+        ec2.delete_security_group(sec_group, dry_run=opts.dry_run)
 
 def startup_script(opts, conf):
     head = "#!/usr/bin/env bash\n su - " + conf.get("AMI_USER", "root") + " -c "
