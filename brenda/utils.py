@@ -29,6 +29,12 @@ def get_work_dir(conf):
         makedirs(work_dir)
     return work_dir
 
+def get_local_ssh_id_fn(opts, conf, mkdir=False):
+    ssh_dir = os.path.join(os.path.expanduser("~"), '.ssh')
+    if mkdir and not os.path.isdir(ssh_dir):
+        os.mkdir(ssh_dir)
+    return os.path.join(ssh_dir, conf.get('SSH_LOCAL_ID', 'brenda_rsa'))
+
 def system(cmd, ignore_errors=False):
     logging.info('Execute command: %s', cmd)
     succeed = 0

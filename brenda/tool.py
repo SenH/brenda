@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import threading, time, Queue, logging
+import os, threading, time, Queue, logging
 from brenda import aws, utils
 
 def instances(opts, conf):
@@ -30,7 +30,12 @@ def ssh_args(opts, conf):
                    '-o', 'LogLevel=quiet']
     if user:
         args.extend(['-o', 'User='+user])
-    args.extend(['-i', aws.get_adaptive_ssh_identity_fn(opts, conf)])
+
+    ssh_local_fn = utils.get_local_ssh_id_fn(opts, conf)
+    if not os.path.exists(ssh_local_fn):
+        raise ValueError("No ssh private key exists, did you run 'brenda-run init'?")
+
+    args.extend(['-i', ssh_local_fn])
     return args
 
 def ssh_cmd_list(opts, conf, args, instances=None):

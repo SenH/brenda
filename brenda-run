@@ -44,8 +44,6 @@ Commands:
 Required config vars:
   AWS_ACCESS_KEY : Amazon Web Services access key.
   AWS_SECRET_KEY : Amazon Web Services secret key.
-  SSH_PUBKEY     : SSH public key that created EC2 instances will recognize
-                   as an authorized key.  Defaults to $HOME/.ssh/id_rsa.pub
   RENDER_PROJECT : Directory containing render project and assets.
                     May be a compressed file on S3 in zip format
                     or any format supported by tar, i.e.
@@ -67,6 +65,7 @@ Optional config vars:
   SSH_KEY_NAME : EC2 ssh key name, default='brenda'
   SECURITY_GROUP : EC2 security group, default='brenda'
   AMI_USER : username when accessing EC2 node.
+  SSH_LOCAL_ID : local ssh identity filename, default='brenda_rsa'
   [Note: all optional vars supported by brenda-node can also be specified here]
 Examples:
   Show current running EC2 instances and spot requests.
@@ -119,8 +118,6 @@ Examples:
                       help="for init/reset-keys, don't create/remove a 'brenda' ssh key pair on AWS")
     parser.add_option("", "--no-security-group", action="store_true", dest="no_security_group",
                       help="for init/reset-keys, don't create/remove a 'brenda' security group on AWS")
-    parser.add_option("", "--aws-ssh-pull", action="store_true", dest="aws_ssh_pull",
-                      help="don't use local ssh keys, instead pull them from AWS")
 
     parser.add_option("-d", "--dry-run", action="store_true", dest="dry_run",
                       help="show what would be done without actually doing it")

@@ -228,37 +228,6 @@ def shutdown(opts, conf, iids):
         cancel_spot_requests_from_instance_ids(conn, iids, opts.dry_run)
         conn.stop_instances(instance_ids=iids, dry_run=opts.dry_run)
 
-def get_ssh_pubkey_fn(opts, conf):
-    v = conf.get('SSH_PUBKEY')
-    if not v:
-        v = os.path.join(os.path.expanduser("~"), '.ssh', 'id_rsa.pub')
-    return v
-
-def get_ssh_identity_fn(opts, conf):
-    v = conf.get('SSH_IDENTITY')
-    if not v:
-        v = os.path.join(os.path.expanduser("~"), '.ssh', 'id_rsa')
-    return v
-
-def get_brenda_ssh_identity_fn(opts, conf, mkdir=False):
-    ssh_dir = os.path.join(os.path.expanduser("~"), '.ssh')
-    if mkdir and not os.path.isdir(ssh_dir):
-        os.mkdir(ssh_dir)
-    return os.path.join(ssh_dir, "id_rsa.brenda")
-
-def local_ssh_keys_exist(opts, conf):
-    return (os.path.exists(get_ssh_pubkey_fn(opts, conf))
-            and os.path.exists(get_ssh_identity_fn(opts, conf))
-            and not os.path.exists(get_brenda_ssh_identity_fn(opts, conf)))
-
-def get_adaptive_ssh_identity_fn(opts, conf):
-    fn = get_brenda_ssh_identity_fn(opts, conf)
-    if not os.path.exists(fn):
-        fn = get_ssh_identity_fn(opts, conf)
-        if not os.path.exists(fn):
-            raise ValueError("No ssh private key exists, did you run 'brenda-run init'?")
-    return fn
-
 def get_instance_id_self():
     req = urllib2.Request("http://169.254.169.254/latest/meta-data/instance-id")
     response = urllib2.urlopen(req)

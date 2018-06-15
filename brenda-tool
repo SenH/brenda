@@ -48,8 +48,6 @@ Required config vars:
   AWS_ACCESS_KEY : Amazon Web Services access key.
   AWS_SECRET_KEY : Amazon Web Services secret key.
 Optional config vars:
-  SSH_IDENTITY   : SSH identity file to access EC2 nodes, defaults to
-                   $HOME/.ssh/id_rsa
   EC2_REGION : EC2 region name, defaults to US standard (optional).
   AMI_USER : username when accessing EC2 node (optional).
   TOOL_THREADS : max number of simultaneous threads to use when querying

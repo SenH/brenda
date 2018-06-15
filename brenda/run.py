@@ -108,24 +108,16 @@ def init(opts, conf):
     # create ssh key pair
     if not opts.no_ssh_keys:
         try:
+            # get new ssh public key pair from AWS
             ssh_key_name = conf.get("SSH_KEY_NAME", "brenda")
-            if not opts.aws_ssh_pull and aws.local_ssh_keys_exist(opts, conf):
-                # push local ssh public key to AWS
-                pubkey_fn = aws.get_ssh_pubkey_fn(opts, conf)
-                logging.info("Importing ssh public key %r to AWS under %r key pair.", pubkey_fn, ssh_key_name)
-                with open(pubkey_fn) as f:
-                    pubkey = f.read()
-                    keypair = ec2.import_key_pair(ssh_key_name, pubkey)
-            else:
-                # get new ssh public key pair from AWS
-                brenda_ssh_ident_fn = aws.get_brenda_ssh_identity_fn(opts, conf, mkdir=True)
-                logging.info("Creating ssh private key from AWS into %r under %r key pair.", brenda_ssh_ident_fn, ssh_key_name)
-                keypair = ec2.create_key_pair(key_name=ssh_key_name)
-                with open(brenda_ssh_ident_fn, 'w') as f:
-                    pass
-                os.chmod(brenda_ssh_ident_fn, 0600)
-                with open(brenda_ssh_ident_fn, 'w') as f:
-                    f.write(keypair.material)
+            ssh_local_fn = utils.get_local_ssh_id_fn(opts, conf, mkdir=True)
+            logging.info("Creating ssh private key from AWS into %r under %r key pair.", ssh_local_fn, ssh_key_name)
+            keypair = ec2.create_key_pair(key_name=ssh_key_name)
+            with open(ssh_local_fn, 'w') as f:
+                pass
+            os.chmod(ssh_local_fn, 0600)
+            with open(ssh_local_fn, 'w') as f:
+                f.write(keypair.material)
         except Exception:
             logging.exception("Failed creating ssh key pair")
 
@@ -151,10 +143,12 @@ def reset_keys(opts, conf):
             ssh_key_name = conf.get("SSH_KEY_NAME", "brenda")
             logging.info("Deleting AWS ssh key pair %r.", ssh_key_name)
             ec2.delete_key_pair(key_name=ssh_key_name)
-            brenda_ssh_ident_fn = aws.get_brenda_ssh_identity_fn(opts, conf)
-            if os.path.exists(brenda_ssh_ident_fn):
-                logging.info("Removing local ssh identity %r.", brenda_ssh_ident_fn)
-                os.remove(brenda_ssh_ident_fn)
+            ssh_local_fn = utils.get_local_ssh_id_fn(opts, conf)
+            if os.path.exists(ssh_local_fn):
+                logging.info("Removing local ssh identity %r.", ssh_local_fn)
+                os.remove(ssh_local_fn)
+            else:
+                logging.info("Local ssh id %r does not exist", ssh_local_fn)
         except Exception:
             logging.exception("Failed removing ssh key pair")
 
