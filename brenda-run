@@ -97,10 +97,14 @@ Examples:
                       help="EC2 instance type, overrides config variable INSTANCE_TYPE")
     parser.add_option("--instance-profile", dest="instance_profile",
                       help="IAM instance profile, overrides config variable INSTANCE_PROFILE")
+    parser.add_option("--monitoring", action="store_true", dest="monitoring",
+                      help="Enable detailed CloudWatch monitoring on the instance")
+
     parser.add_option("-p", "--price", dest="price",
                       help="Maximum price in dollars per hour to bid on spot instances, overrides config variable BID_PRICE")
     parser.add_option("-P", "--persistent", action="store_true", dest="persistent",
                       help="Make spot requests persistent")
+
     parser.add_option("-T", "--terminate", action="store_true", dest="terminate",
                       help="For stop, terminate EC2 instances instead of stopping them (required for spot instances)")
     parser.add_option("-I", "--idle", action="store_true", dest="idle",

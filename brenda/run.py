@@ -26,6 +26,7 @@ def demand(opts, conf):
         'user_data'             : startup_script(opts, conf) if not opts.idle else None,
         'key_name'              : conf.get("SSH_KEY_NAME", "brenda"),
         'security_groups'       : [conf.get("SECURITY_GROUP", "brenda")],
+        'monitoring_enabled'    : opts.monitoring,
         'dry_run'               : opts.dry_run,
         }
     logging.debug('Instance parameters: %s', run_args)
@@ -48,6 +49,7 @@ def spot(opts, conf):
         'user_data'             : startup_script(opts, conf) if not opts.idle else None,
         'key_name'              : conf.get("SSH_KEY_NAME", "brenda"),
         'security_groups'       : [conf.get("SECURITY_GROUP", "brenda")],
+        'monitoring_enabled'    : opts.monitoring,
         'dry_run'               : opts.dry_run,
         }
     logging.debug('Instance parameters: %s', run_args)
