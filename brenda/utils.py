@@ -61,10 +61,6 @@ def makedirs(dir):
     logging.debug('Create folders: %s', dir)
     os.makedirs(dir)
 
-def mv(src, dest):
-    logging.debug('Move %s to %s', src, dest)
-    shutil.move(src, dest)
-
 def shutdown():
     logging.info('Shutdown system')
     system(["sudo", "/sbin/shutdown", "-h", "0"])
@@ -79,28 +75,6 @@ def str_nl(s):
     if len(s) > 0 and s[-1] != '\n':
         s += '\n'
     return s
-
-def top_dir(dir):
-    """
-    If dir contains no files and only one directory,
-    return that directory.  Otherwise return dir.
-    Note file/dir ignore rules.
-    """
-    def ignore(fn):
-        return fn == 'lost+found' or fn.startswith('.') or fn.endswith('.etag')
-    for dirpath, dirnames, filenames in os.walk(dir):
-        dirs = []
-        for f in filenames:
-            if not ignore(f):
-                break
-        else:
-            for d in dirnames:
-                if not ignore(d):
-                    dirs.append(d)
-        if len(dirs) == 1:
-            return os.path.join(dirpath, dirs[0])
-        else:
-            return dirpath
 
 def system_return_output(cmd, capture_stderr=False):
     output = ""
