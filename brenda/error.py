@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import time, httplib, socket, logging
+import time, httplib, socket, logging, sys
 import boto.exception
 
 class ValueErrorRetry(ValueError):
@@ -49,7 +49,9 @@ def retry(conf, action):
                 logging.info('Waiting %d seconds before retrying error', error_pause)
                 time.sleep(error_pause)
             else:
-                raise ValueError("FAIL after %d retries" % (n_retries,))
+                logging.critical("Failed after %d error retries", n_retries, exc_info=1)
+                sys.exit(1)
+
         else:
             return ret
 
