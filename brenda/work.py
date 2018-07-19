@@ -63,10 +63,12 @@ def push(opts, args, conf):
         start = fnum
         end = min(fnum + opts.step - 1, opts.end)
         for key, value in (
-              ("$START", "%d" % (start,)),
-              ("$END", "%d" % (end,)),
-              ("$STEP", "%d" % (opts.step,))
-              ):
+            ("$JOB_NAME", conf.get("JOB_NAME", "NONE")),
+            ("$JOB_URL", conf.get("JOB_URL", "NONE")),
+            ("$START", "%d" % (start,)),
+            ("$END", "%d" % (end,)),
+            ("$STEP", "%d" % (opts.step,))
+        ):
             script = script.replace(key, value)
         if subframe_iterator_defined(opts):
             for macro_list in subframe_iterator(opts):
