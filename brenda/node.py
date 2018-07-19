@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os, sys, signal, subprocess, multiprocessing, stat, time, logging
-import paracurl
 from brenda import aws, utils, error
 
 class State(object):

@@ -13,16 +13,6 @@ declare -r WORK_DIR="${TMPDIR}brenda-work"
 export RENDER_OUTPUT="s3://sh-brenda"
 export BRENDA_CONFIG="$ROOT/test/brenda.conf"
 
-# Compile paracurl
-if test ! -f "$ROOT/paracurl.so"
-then
-	echo 'Compile paracurl'
-	declare -r BUILD_DIR="$ROOT/build"
-	python "$ROOT/setup.py" --with-paracurl build
-	cp -av "$BUILD_DIR/lib."*"/paracurl.so" "$ROOT"
-	rm -rf "$BUILD_DIR"
-fi
-
 # Setup work dir
 rm -rvf "$WORK_DIR"
 mkdir -pv "$WORK_DIR"

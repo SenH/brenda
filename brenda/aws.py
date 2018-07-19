@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, sys, time, datetime, calendar, urllib2, logging
+import sys, time, datetime, calendar, urllib2, logging
 import boto, boto.sqs, boto.s3, boto.ec2
 import boto.utils
 from brenda.error import ValueErrorRetry
@@ -60,37 +60,6 @@ def get_ec2_conn(conf):
 def parse_s3_url(url):
     if url.startswith('s3://'):
         return url[5:].split('/', 1)
-
-def s3_get(conf, s3url, dest, etag=None):
-    """
-    High-speed download from S3 that can use multiple simultaneous
-    download threads to optimize the downloading of a single file.
-    S3 file is given in s3url (using s3://BUCKET/FILE naming
-    convention) and will be saved in dest.  If etag from previous
-    download is provided, and file hasn't changed since then, don't
-    download the file and instead raise an exception of type
-    paracurl.Exception where the first element of the exception
-    tuple == paracurl.PC_ERR_ETAG_MATCH.  Returns tuple of
-    (file_length, etag).
-    """
-    import paracurl
-
-    paracurl_kw = {
-        'max_threads' : int(conf.get('CURL_MAX_THREADS', '16')),
-        'n_retries' : int(conf.get('CURL_N_RETRIES', '4')),
-        'debug' : int(conf.get('CURL_DEBUG', '1'))
-        }
-    if etag:
-        paracurl_kw['etag'] = etag
-    s3tup = parse_s3_url(s3url)
-    if not s3tup or len(s3tup) != 2:
-        raise ValueError("s3_get: bad s3 url: %r" % (s3url,))
-    conn = get_s3_conn(conf)
-    buck = conn.get_bucket(s3tup[0])
-    k = boto.s3.key.Key(buck)
-    k.key = s3tup[1]
-    url = k.generate_url(600, force_http=True)
-    return paracurl.download(dest, url, **paracurl_kw)
 
 def put_s3_file(bucktup, path, s3name):
     """

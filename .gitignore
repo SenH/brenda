@@ -1,6 +1,4 @@
 .tm_properties
-build
-*.so
 *.tmp
 *.log
 *.pyc

@@ -37,11 +37,6 @@ Required config vars:
 Optional config vars:
   S3_REGION  : S3 region name, defaults to US standard.
   SQS_REGION : SQS region name, defaults to US standard.
-  CURL_MAX_THREADS : max number of simultaneous threads to use when fetching
-                     project bundle from S3 (default=16).
-  CURL_N_RETRIES : max number of retries on error when fetching project bundle
-                   from S3 (default=4).
-  CURL_DEBUG : curl debug verbosity level (default=1).
   VISIBILITY_TIMEOUT : SQS visibility timeout in seconds (default=120).
                        SQS will return a task to the queue if the node worker
                        doesn't acknowledge or complete the pending task over
