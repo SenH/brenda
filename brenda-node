@@ -45,10 +45,9 @@ Optional config vars:
                                 that render farm will reassert with SQS that
                                 task is still pending (default=30).  This value
                                 must be less than VISIBILITY_TIMEOUT.
-  N_RETRIES : number of retries on general errors before fail (default=5).
+  ERROR_RETRIES : number of retries on general errors before fail (default=5).
   ERROR_PAUSE : number of seconds to pause after general error (default=30).
-  RESET_PERIOD : period of time in seconds before retry counter is reset
-                 (default=3600).
+  ERROR_RESET : time in seconds before retry counter is reset (default=3600).
   WORK_DIR : local work directory used by render farm node, defaults to AMI_USER home
   RUNNING_ON_EC2 : boolean (0|1, default=1) that indicates if we are running
                    on an EC2 instance.

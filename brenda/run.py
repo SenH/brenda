@@ -172,9 +172,9 @@ def startup_script(opts, conf):
         "LOG_DAEMON",
         "VISIBILITY_TIMEOUT",
         "VISIBILITY_TIMEOUT_REASSERT",
-        "N_RETRIES",
+        "ERROR_RETRIES",
         "ERROR_PAUSE",
-        "RESET_PERIOD",
+        "ERROR_RESET",
         "SHUTDOWN",
         "DONE"
         ]

@@ -26,8 +26,8 @@ class ValueErrorRetry(ValueError):
     pass
 
 def retry(conf, action):
-    n_retries = int(conf.get('N_RETRIES', '5'))
-    reset_period = int(conf.get('RESET_PERIOD', '3600'))
+    n_retries = int(conf.get('ERROR_RETRIES', '5'))
+    reset_period = int(conf.get('ERROR_RESET', '3600'))
     error_pause = int(conf.get('ERROR_PAUSE', '30'))
 
     reset = int(time.time())
