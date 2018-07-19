@@ -178,7 +178,6 @@ def startup_script(opts, conf):
         "N_RETRIES",
         "ERROR_PAUSE",
         "RESET_PERIOD",
-        "RENDER_PROJECT_ALWAYS_REFETCH",
         "SHUTDOWN",
         "DONE"
         ]

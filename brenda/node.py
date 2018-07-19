@@ -175,17 +175,15 @@ def run_tasks(opts, args, conf):
 
                     # create output directory
                     task.outdir = os.path.join(work_dir, "{}_out_{}".format(task.script_name, task.id))
+                    logging.info('Task folder: %s', task.outdir);
                     utils.rmtree(task.outdir)
                     utils.mkdir(task.outdir)
 
                     # get the task script
                     script = task.msg.get_body()
 
-                    # do macro substitution on the task script
-                    script = script.replace('$OUTDIR', task.outdir)
-
-                    # cd to project directory, where we will run render task from
-                    with utils.Cd(proj_dir):
+                    # cd to output directory, where we will run render task from
+                    with utils.Cd(task.outdir):
                         # write script file and make it executable
                         script_fn = "./{}".format(task.script_name)
                         with open(script_fn, 'w') as f:
@@ -321,15 +319,6 @@ def run_tasks(opts, args, conf):
         except Exception:
             logging.exception('Failed getting spot instance request')
 
-    # get project (from s3:// or file://)
-    render_project = conf.get('RENDER_PROJECT')
-    if not render_project:
-        raise ValueError("RENDER_PROJECT is not set")
-
-    # directory that render task will be run from
-    proj_dir = get_project(conf, render_project)
-    logging.info('Project folder: %s', proj_dir)
-
     # continue only if we are not in "dry-run" mode
     if not opts.dry_run:
         # execute the task loop
@@ -348,68 +337,6 @@ def run_tasks(opts, args, conf):
             utils.shutdown()
 
         logging.info('Completed %d tasks', local.task_count)
-
-def get_s3_project(conf, s3url, proj_dir):
-    # target file in which to save S3 download
-    fn = os.path.basename(s3url)
-
-    # Does .etag file exist?  If so, pass etag to
-    # s3_get to avoid downloading the file if it
-    # already exists.
-    always_refetch = int(conf.get('RENDER_PROJECT_ALWAYS_REFETCH', '0'))
-    etag = None
-    if not always_refetch:
-        try:
-            with open(os.path.join(proj_dir, fn + '.etag')) as efn:
-                etag = efn.read().strip()
-        except Exception:
-            pass
-
-    # create new directory to download project
-    new_dir = proj_dir + '.pre.tmp'
-    utils.rmtree(new_dir)
-    utils.mkdir(new_dir)
-
-    try:
-        with utils.Cd(new_dir):
-            # download the file from S3
-            file_len, etag = aws.s3_get(conf, s3url, fn, etag=etag)
-
-            # save the etag for future reference
-            with open(fn + '.etag', 'w') as efn:
-                efn.write(etag+'\n')
-
-            # Use "unzip" tool for .zip files,
-            # and "tar xf" for everything else.
-            if fn.lower().endswith('.zip'):
-                utils.system(["unzip", fn])
-            else:
-                utils.system(["tar", "xf", fn])
-            utils.rm(fn)
-
-        utils.rmtree(proj_dir)
-        utils.mv(new_dir, proj_dir)
-
-    except paracurl.Exception, e:
-        if e[0] == paracurl.PC_ERR_ETAG_MATCH:
-            # file was previously downloaded, don't need new_dir
-            logging.warning('Skip download from %s. Project is up to date.', s3url)
-        else:
-            raise
-
-    finally:
-        utils.rmtree(new_dir)
-
-def get_project(conf, url):
-    if url.startswith("file://"):
-        path = url[7:]
-        if not os.path.isdir(path):
-            raise ValueError("%s does not point to a directory" % (url,))
-        return path
-    else:
-        proj_dir = os.path.join(utils.get_work_dir(conf), "brenda-project.tmp")
-        get_s3_project(conf, url, proj_dir)
-        return utils.top_dir(proj_dir)
 
 def validate_done(d):
     done_choices = ('exit', 'shutdown', 'poll')

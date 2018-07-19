@@ -42,11 +42,6 @@ Commands:
 Required config vars:
   AWS_ACCESS_KEY : Amazon Web Services access key.
   AWS_SECRET_KEY : Amazon Web Services secret key.
-  RENDER_PROJECT : Directory containing render project and assets.
-                    May be a compressed file on S3 in zip format
-                    or any format supported by tar, i.e.
-                    s3://BUCKET/myproject.zip, or local directory on render
-                    farm node i.e. file:///my/local/render/project
   WORK_QUEUE : name of SQS queue (e.g. sqs://QUEUE) containing render
                work.
   RENDER_OUTPUT : render farm will save render output to this S3 bucket/prefix,
