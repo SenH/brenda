@@ -1,2 +1,3 @@
-#!/opt/local/bin/bash
-python perframe.py --pause 0 -o $OUTDIR/frame_######_X-$SF_MIN_X-$SF_MAX_X-Y-$SF_MIN_Y-$SF_MAX_Y -s $START -e $END -j $STEP
+#!/usr/bin/env bash
+
+python ../perframe.py --pause 0 -o frame_######_X-$SF_MIN_X-$SF_MAX_X-Y-$SF_MIN_Y-$SF_MAX_Y -s $START -e $END -j $STEP

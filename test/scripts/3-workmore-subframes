@@ -1,4 +1,4 @@
-#!/opt/local/bin/bash
+#!/usr/bin/env bash
 # Push more work (subframes) to test brenda-node while in poll mode.
 set -eu
 

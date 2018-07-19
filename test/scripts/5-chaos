@@ -1,4 +1,4 @@
-#!/opt/local/bin/bash
+#!/usr/bin/env bash
 # Push chaos task to test brenda-node while in poll mode.
 set -eu
 

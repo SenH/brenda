@@ -1,4 +1,4 @@
-#!/opt/local/bin/bash
+#!/usr/bin/env bash
 set -eu
 
 export RENDER_OUTPUT="s3://sh-brenda"

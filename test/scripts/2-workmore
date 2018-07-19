@@ -1,4 +1,4 @@
-#!/opt/local/bin/bash
+#!/usr/bin/env bash
 # Push more work to test brenda-node while in poll mode.
 # This time use a task size of 2.
 set -eu
