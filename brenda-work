@@ -41,6 +41,7 @@ Optional config vars:
                        SQS will return a task to the queue if the brenda-node
                        worker doesn't acknowledge or complete the pending
                        task over this period of time.
+  MESSAGE_RETENTION : Number of seconds that messages wil be kept in the queue (default=1209600, 14 days)
 Examples:
   Using a task script such as "single frame render" above, push a separate
   task to render each frame from 1 to 1440:
@@ -94,7 +95,7 @@ Examples:
 
     # Get configuration
     conf = config.Config(opts.config, 'BRENDA_')
-    # print "CONFIG", conf
+    print "CONFIG", conf
     utils.setup_logger(opts, conf)
     
     # dispatch
