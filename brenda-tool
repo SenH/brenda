@@ -44,11 +44,10 @@ Command abbreviations:
     s : ssh
     r : rsync
     i : instances
-Required config vars:
-  AWS_ACCESS_KEY : Amazon Web Services access key.
-  AWS_SECRET_KEY : Amazon Web Services secret key.
 Optional config vars:
   EC2_REGION : EC2 region name, defaults to US standard (optional).
+  CREDENTIAL_PROFILE : Profile name to retrieve credentials from
+
   AMI_USER : username when accessing EC2 node (optional).
   TOOL_THREADS : max number of simultaneous threads to use when querying
                  multiple render farm instances (default=64).

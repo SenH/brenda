@@ -28,8 +28,6 @@ Synopsis:
   Render farm node worker that executes render tasks
   from the work queue, and saves the render output in an S3 bucket. 
 Required config vars:
-  AWS_ACCESS_KEY : Amazon Web Services access key.
-  AWS_SECRET_KEY : Amazon Web Services secret key.
   WORK_QUEUE : name of SQS queue (e.g. sqs://QUEUE) containing render
                work.
   RENDER_OUTPUT : render farm will save render output to this S3 bucket/prefix,
@@ -37,6 +35,7 @@ Required config vars:
 Optional config vars:
   S3_REGION  : S3 region name, defaults to US standard.
   SQS_REGION : SQS region name, defaults to US standard.
+
   VISIBILITY_TIMEOUT : SQS visibility timeout in seconds (default=120).
                        SQS will return a task to the queue if the node worker
                        doesn't acknowledge or complete the pending task over
@@ -48,9 +47,9 @@ Optional config vars:
   ERROR_RETRIES : number of retries on general errors before fail (default=5).
   ERROR_PAUSE : number of seconds to pause after general error (default=30).
   ERROR_RESET : time in seconds before retry counter is reset (default=3600).
+
   WORK_DIR : local work directory used by render farm node, defaults to AMI_USER home
-  RUNNING_ON_EC2 : boolean (0|1, default=1) that indicates if we are running
-                   on an EC2 instance.
+  RUNNING_ON_EC2 : boolean (0|1, default=1) that indicates if we are running on an EC2 instance.
   DONE : what to do when render job is complete, choices are:
          'shutdown' -- terminate the instance
          'poll'     -- continue to poll the work queue for new tasks

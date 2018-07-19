@@ -14,47 +14,39 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, time, datetime, calendar, urllib2, logging
+import time, datetime, calendar, urllib2, logging
 import boto, boto.sqs, boto.s3, boto.ec2
 import boto.utils
 from brenda.error import ValueErrorRetry
 
-def aws_creds(conf):
-    try:
-        return {'aws_access_key_id' : conf['AWS_ACCESS_KEY'],
-                'aws_secret_access_key' : conf['AWS_SECRET_KEY']}
-    except KeyError:
-        logging.error('AWS_ACCESS_KEY or AWS_SECRET_KEY not defined in configuration')
-        sys.exit(1)
-
 def get_s3_conn(conf):
     region = conf.get('S3_REGION')
     if region:
-        conn = boto.s3.connect_to_region(region, **aws_creds(conf))
+        conn = boto.s3.connect_to_region(region, profile_name=conf.get('CREDENTIAL_PROFILE'))
         if not conn:
             raise ValueErrorRetry("Could not establish S3 connection to region %r" % (region,))
     else:
-        conn = boto.connect_s3(**aws_creds(conf))
+        conn = boto.connect_s3(profile_name=conf.get('CREDENTIAL_PROFILE'))
     return conn
 
 def get_sqs_conn(conf):
     region = conf.get('SQS_REGION')
     if region:
-        conn = boto.sqs.connect_to_region(region, **aws_creds(conf))
+        conn = boto.sqs.connect_to_region(region, profile_name=conf.get('CREDENTIAL_PROFILE'))
         if not conn:
             raise ValueErrorRetry("Could not establish SQS connection to region %r" % (region,))
     else:
-        conn = boto.connect_sqs(**aws_creds(conf))
+        conn = boto.connect_sqs(profile_name=conf.get('CREDENTIAL_PROFILE'))
     return conn
 
 def get_ec2_conn(conf):
     region = conf.get('EC2_REGION')
     if region:
-        conn = boto.ec2.connect_to_region(region, **aws_creds(conf))
+        conn = boto.ec2.connect_to_region(region, profile_name=conf.get('CREDENTIAL_PROFILE'))
         if not conn:
             raise ValueErrorRetry("Could not establish EC2 connection to region %r" % (region,))
     else:
-        conn = boto.connect_ec2(**aws_creds(conf))
+        conn = boto.connect_ec2(profile_name=conf.get('CREDENTIAL_PROFILE'))
     return conn
 
 def parse_s3_url(url):

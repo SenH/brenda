@@ -40,8 +40,6 @@ Commands:
   init   : do one-time initialization by creating SSH keys and Security Group.
   reset  : undo the effects of "init" by deleting SSH keys and Security Group.
 Required config vars:
-  AWS_ACCESS_KEY : Amazon Web Services access key.
-  AWS_SECRET_KEY : Amazon Web Services secret key.
   WORK_QUEUE : name of SQS queue (e.g. sqs://QUEUE) containing render
                work.
   RENDER_OUTPUT : render farm will save render output to this S3 bucket/prefix,
@@ -50,6 +48,8 @@ Required config vars:
            that already has Brenda pre-installed.
 Optional config vars:
   EC2_REGION : EC2 region name, defaults to US standard (optional).
+  CREDENTIAL_PROFILE : Profile name to retrieve credentials from
+
   INSTANCE_TYPE : EC2 instance type.
   INSTANCE_PROFILE : Name of the IAM profile to attach to the instance
   BID_PRICE : maximum spot market bid price for EC2 instance in dollars per

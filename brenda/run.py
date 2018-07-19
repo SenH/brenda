@@ -22,7 +22,7 @@ def demand(opts, conf):
         'image_id'              : utils.get_opt(opts.ami, conf, 'AMI_ID', must_exist=True),
         'max_count'             : opts.n_instances,
         'instance_type'         : utils.get_opt(opts.instance_type, conf, 'INSTANCE_TYPE', must_exist=True),
-        'instance_profile_name' : utils.get_opt(opts.instance_profile, conf, 'INSTANCE_PROFILE'),
+        'instance_profile_name' : utils.get_opt(opts.instance_profile, conf, 'INSTANCE_PROFILE', must_exist=True),
         'user_data'             : startup_script(opts, conf) if not opts.idle else None,
         'key_name'              : conf.get("SSH_KEY_NAME", "brenda"),
         'security_groups'       : [conf.get("SECURITY_GROUP", "brenda")],
@@ -45,7 +45,7 @@ def spot(opts, conf):
         'type'                  : 'persistent' if opts.persistent else 'one-time',
         'count'                 : opts.n_instances,
         'instance_type'         : utils.get_opt(opts.instance_type, conf, 'INSTANCE_TYPE', must_exist=True),
-        'instance_profile_name' : utils.get_opt(opts.instance_profile, conf, 'INSTANCE_PROFILE'),
+        'instance_profile_name' : utils.get_opt(opts.instance_profile, conf, 'INSTANCE_PROFILE', must_exist=True),
         'user_data'             : startup_script(opts, conf) if not opts.idle else None,
         'key_name'              : conf.get("SSH_KEY_NAME", "brenda"),
         'security_groups'       : [conf.get("SECURITY_GROUP", "brenda")],
@@ -157,8 +157,6 @@ def startup_script(opts, conf):
     head += "/usr/local/bin/brenda-node --daemon <<EOF\n"
     tail = "EOF\n"
     keys = [
-        'AWS_ACCESS_KEY',
-        'AWS_SECRET_KEY',
         "SQS_REGION",
         "EC2_REGION",
         "S3_REGION",

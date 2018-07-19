@@ -31,12 +31,12 @@ Commands:
   status : show the number of outstanding tasks in SQS queue.
   reset  : clear all tasks in SQS queue.
 Required config vars:
-  AWS_ACCESS_KEY : Amazon Web Services access key.
-  AWS_SECRET_KEY : Amazon Web Services secret key.
   WORK_QUEUE : name of SQS queue (e.g. sqs://QUEUE) used to stage render
                work.  Will be automatically created if it doesn't exist.
 Optional config vars:
   SQS_REGION : SQS region name, defaults to US standard.
+  CREDENTIAL_PROFILE : Profile name to retrieve credentials from
+
   VISIBILITY_TIMEOUT : SQS visibility timeout in seconds (default=120).
                        SQS will return a task to the queue if the brenda-node
                        worker doesn't acknowledge or complete the pending
@@ -95,7 +95,7 @@ Examples:
 
     # Get configuration
     conf = config.Config(opts.config, 'BRENDA_')
-    print "CONFIG", conf
+    # print "CONFIG", conf
     utils.setup_logger(opts, conf)
     
     # dispatch
