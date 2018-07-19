@@ -151,10 +151,13 @@ def create_sqs_queue(conf):
 def get_sqs_conn_queue(conf):
     qname = get_sqs_work_queue_name(conf)
     conn = get_sqs_conn(conf)
-    return conn.get_queue(qname), conn
+    q = conn.get_queue(qname)
+    if not q:
+        logging.error('Queue %s does not exist', qname)
+    else:
+        logging.debug(conn.get_queue_attributes(q, 'QueueArn')['QueueArn'])
 
-def get_sqs_queue(conf):
-    return get_sqs_conn_queue(conf)[0]
+    return q, conn
 
 def write_sqs_queue(string, queue, attributes=None):
     m = boto.sqs.message.Message()

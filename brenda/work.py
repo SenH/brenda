@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, random, logging
+import os, sys, random, logging
 from brenda import aws
 
 def subframe_iterator_defined(opts):
@@ -39,26 +39,33 @@ def subframe_iterator(opts):
 
 def push(opts, args, conf):
     # get task script
-    with open(opts.task_script) as f:
-        task_script = f.read()
+    if not opts.task_script:
+        logging.error('-T, --task_script option is required')
     
+    try:
+        with open(opts.task_script) as f:
+            task_script = f.read()
+    except Exception:
+        logging.error("Could not read task_script file")
+        sys.exit(1)
+
     # check for shebang
     try:
         task_script.startswith("#!")
     except Exception:
-        logging.exception('Shebang (#!) is missing from task script: %s', opts.task_script)
+        logging.error('Shebang (#!) is missing from task script: %s', opts.task_script)
+        sys.exit(1)
 
     # build tasklist
     tasklist = []
-    for fnum in xrange(opts.start, opts.end+1, opts.task_size):
+    for fnum in xrange(opts.start, opts.end+1, opts.step):
         script = task_script
         start = fnum
-        end = min(fnum + opts.task_size - 1, opts.end)
-        step = 1
+        end = min(fnum + opts.step - 1, opts.end)
         for key, value in (
               ("$START", "%d" % (start,)),
               ("$END", "%d" % (end,)),
-              ("$STEP", "%d" % (step,))
+              ("$STEP", "%d" % (opts.step,))
               ):
             script = script.replace(key, value)
         if subframe_iterator_defined(opts):
@@ -79,8 +86,6 @@ def push(opts, args, conf):
     if not opts.dry_run:
         aws.create_sqs_queue(conf)
         q, conn = aws.get_sqs_conn_queue(conf)
-        logging.debug(conn.get_queue_attributes(q, 'QueueArn')['QueueArn']);
-
 
     # push work queue to sqs
     i = 0
@@ -97,7 +102,7 @@ def push(opts, args, conf):
         # Deliver up to 10 messages in a single request
         # http://boto.cloudhackers.com/en/latest/ref/sqs.html#boto.sqs.queue.Queue.write_batch
         if i%10 == 0 or tasklist.index(task) == tasklist_last_index:
-            if q is not None and not opts.dry_run:
+            if q and not opts.dry_run:
                 logging.info('Queueing tasks %d of %d', j, tasklist_last_index+1)
                 aws.write_batch_sqs_queue(batch, q)
             del batch[:]
@@ -105,16 +110,12 @@ def push(opts, args, conf):
 
 def status(opts, args, conf):
     q, conn = aws.get_sqs_conn_queue(conf)
-    logging.debug(conn.get_queue_attributes(q, 'QueueArn')['QueueArn']);
 
-    if q is not None:
-        logging.info("%d tasks queued", q.count())
-    else:
-        logging.info("No tasks queued")
+    if q:
+        logging.info("%d tasks queued on %s", q.count(), aws.get_sqs_work_queue_name(conf))
 
 def reset(opts, args, conf):
     q, conn = aws.get_sqs_conn_queue(conf)
-    logging.debug(conn.get_queue_attributes(q, 'QueueArn')['QueueArn']);
 
     if q:
         if opts.hard:

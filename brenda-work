@@ -48,7 +48,7 @@ Examples:
   You want to render a 16 minute short (21,600 frames), but each frame takes
   an average of 4 computer hours to render, so you want to break each frame
   into 16 subframes (4x4) to reduce the subframe render time to 15 minutes:
-    $ ./brenda-work -T [SUBFRAME_TASK_SCRIPT] -e 21600 -X 4 -Y 4 -d push
+    $ brenda-work -T [SUBFRAME_TASK_SCRIPT] -e 21600 -X 4 -Y 4 -d push
   Show number of pending tasks in work queue:
     $ brenda-work status
   Remove all tasks from queue, reseting task queue to empty state:
@@ -63,23 +63,22 @@ Examples:
     parser.add_option("-v", "--loglevel", dest="loglevel",
                       help="Level of events to log (default: INFO)")
 
-    parser.add_option("-d", "--dry-run", action="store_true", dest="dry_run",
-                      help="Show tasks that would be pushed to work queue, but don't actually push anything")
-
-    parser.add_option("-T", "--task-script", dest="task_script", metavar="FILE",
+    parser.add_option("-T", "--task-script", dest="task_script",
                       help="Script template file for a single task.")
-
-    parser.add_option("-s", "--start", type="int", dest="start", default=1,
+    parser.add_option("-s", "--start", type="int", dest="start", default=0,
                       help="Start frame to render, default=%default")
     parser.add_option("-e", "--end", type="int", dest="end",
                       help="End frame to render")
+    parser.add_option("-j", "--step", type="int", dest="step", default=1,
+                      help="Frame increment steps, default=%default")
+
     parser.add_option("-X", "--subdiv-x", type="int", dest="subdiv_x", default=0,
                       help="Render subframes, number of subdivisions on X axis")
     parser.add_option("-Y", "--subdiv-y", type="int", dest="subdiv_y", default=0,
                       help="Render subframes, number of subdivisions on Y axis")
-    parser.add_option("-S", "--task-size", type="int", dest="task_size", default=1,
-                      help="Number of frames per task, default=%default")
 
+    parser.add_option("-d", "--dry-run", action="store_true", dest="dry_run",
+                      help="Show tasks that would be pushed to work queue, but don't actually push anything")
     parser.add_option("-r", "--randomize", action="store_true", dest="randomize",
                       help="Randomize tasks before pushing to work queue")
 

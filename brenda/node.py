@@ -129,7 +129,7 @@ def run_tasks(opts, args, conf):
             local.task_push = None
 
             # get SQS work queue
-            q = aws.get_sqs_queue(conf)
+            q = aws.get_sqs_conn_queue(conf)[0]
 
             # Loop over tasks.  There are up to two different tasks at any
             # given moment that we are processing concurrently:
