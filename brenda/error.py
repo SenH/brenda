@@ -34,22 +34,22 @@ def retry(conf, action):
     i = 0
     while True:
         try:
-            logging.debug('Retrying error action: %s', action)
+            logging.debug('Trying %s', action)
             ret = action()
         # These are the exception types that justify a retry -- extend this list as needed
         except (httplib.IncompleteRead, socket.error, boto.exception.BotoClientError, ValueErrorRetry), e:
             now = int(time.time())
             if now > reset + reset_period:
-                logging.info('Reset error retry')
+                logging.info('Resetting retry period after %s seconds', reset_period)
                 i = 0
                 reset = now
             i += 1
-            logging.warning('Retry error %d/%d: %s', i, n_retries, e)
+            logging.warning('Retry %d/%d - %s', i, n_retries, e)
             if i < n_retries:
-                logging.info('Waiting %d seconds before retrying error', error_pause)
+                logging.info('Waiting %d seconds before retrying', error_pause)
                 time.sleep(error_pause)
             else:
-                logging.critical("Failed after %d error retries", n_retries, exc_info=1)
+                logging.critical("Giving up after %d retries. Exiting...", n_retries, exc_info=1)
                 sys.exit(1)
 
         else:

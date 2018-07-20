@@ -21,7 +21,7 @@ class State(object):
     pass
 
 # We use subprocess.Popen (for render task) and
-# multiprocessing.Process (for S3-push task) polymorphically,
+# multiprocessing.Process (for upload task) polymorphically,
 # so add some methods to make them consistent.
 
 class Subprocess(subprocess.Popen):
@@ -39,23 +39,23 @@ class Multiprocess(multiprocessing.Process):
     def poll(self):
         return self.exitcode
 
-def start_s3_push_process(opts, args, conf, outdir):
-    p = Multiprocess(target=s3_push_process, args=(opts, args, conf, outdir))
+def start_upload_process(opts, args, conf, outdir):
+    p = Multiprocess(target=s3_upload_process, args=(opts, args, conf, outdir))
     p.start()
     return p
 
-def s3_push_process(opts, args, conf, outdir):
-    def do_s3_push():
+def s3_upload_process(opts, args, conf, outdir):
+    def do_s3_upload():
         bucktup = aws.get_s3_output_bucket(conf)
         for dirpath, dirnames, filenames in os.walk(outdir):
             for f in filenames:
                 path = os.path.join(dirpath, f)
-                logging.info('Uploading %s to %s', path, aws.format_s3_url(bucktup, f))
+                logging.info('Uploading %s to %s', f, aws.format_s3_url(bucktup, f))
                 aws.put_s3_file(bucktup, path, f)
             break
 
     try:
-        error.retry(conf, do_s3_push)
+        error.retry(conf, do_s3_upload)
     except Exception:
         logging.exception('Upload to S3 failed')
         sys.exit(1)
@@ -89,8 +89,8 @@ def run_tasks(opts, args, conf):
         sys.exit(1)
 
     def cleanup_all():
-        tasks = (local.task_active, local.task_push)
-        local.task_active = local.task_push = None
+        tasks = (local.task_render, local.task_upload)
+        local.task_render = local.task_upload = None
         for i, task in enumerate(tasks):
             name = task_names[i]
             cleanup(task, name)
@@ -124,8 +124,8 @@ def run_tasks(opts, args, conf):
     def task_loop():
         try:
             # reset tasks
-            local.task_active = None
-            local.task_push = None
+            local.task_render = None
+            local.task_upload = None
 
             # get SQS work queue
             q = aws.get_sqs_conn_queue(conf)[0]
@@ -133,15 +133,13 @@ def run_tasks(opts, args, conf):
             # Loop over tasks.  There are up to two different tasks at any
             # given moment that we are processing concurrently:
             #
-            # 1. Active task -- usually a render operation.
-            # 2. S3 push task -- a task which pushes the products of the
-            #                    previous active task (such as rendered
-            #                    frames) to S3.
+            # 1. Render task -- usually a render operation.
+            # 2. Upload task -- a task which uploads results to S3.
             while True:
-                # reset active task
-                local.task_active = None
+                # reset render task
+                local.task_render = None
 
-                # initialize active task object
+                # initialize render task object
                 task = State()
                 task.msg = None
                 task.proc = None
@@ -156,9 +154,9 @@ def run_tasks(opts, args, conf):
 
                 # output some debug info
                 logging.debug('Reading work queue')
-                if local.task_push:
-                    logging.info("Running upload task #%d", local.task_push.id)
-                    logging.debug(local.task_push.__dict__)
+                if local.task_upload:
+                    logging.info("Running upload task #%d", local.task_upload.id)
+                    logging.debug(local.task_upload.__dict__)
                 else:
                     logging.info('No upload task available')
 
@@ -169,12 +167,11 @@ def run_tasks(opts, args, conf):
                     task.id = local.task_id_counter
                     task.script_name = task.msg.message_attributes['script_name']['string_value']
 
-                    # register active task
-                    local.task_active = task
+                    # register render task
+                    local.task_render = task
 
                     # create output directory
                     task.outdir = os.path.join(work_dir, "{}_out_{}".format(task.script_name, task.id))
-                    logging.info('Task folder: %s', task.outdir);
                     utils.rmtree(task.outdir)
                     utils.mkdir(task.outdir)
 
@@ -191,24 +188,20 @@ def run_tasks(opts, args, conf):
                         os.chmod(script_fn, st.st_mode | (stat.S_IEXEC|stat.S_IXGRP|stat.S_IXOTH))
 
                         # run the script
-                        logging.info("Executing task script: %s", os.path.realpath(script_fn))
-                        logging.debug(script.replace("\n"," "))
                         task.proc = Subprocess([script_fn])
 
-                    logging.info('Running render task: %s #%d', local.task_active.script_name, local.task_active.id)
-                    logging.debug(local.task_active.__dict__)
+                    logging.info('Running render task \"%s #%d\"', local.task_render.script_name, local.task_render.id)
+                    logging.info(script.replace("\n"," "))
+                    logging.debug(local.task_render.__dict__)
 
-                # Wait for active and S3-push tasks to complete,
-                # while periodically reasserting with SQS to
-                # acknowledge that tasks are still pending.
-                # (If we don't reassert with SQS frequently enough,
-                # it will assume we died, and put our tasks back
-                # in the queue.  "frequently enough" means within
+                # Wait for render & upload tasks to complete, while periodically reasserting with SQS to
+                # acknowledge that tasks are still pending. (If we don't reassert with SQS frequently enough,
+                # it will assume we died, and put our tasks back in the queue.  "frequently enough" means within
                 # visibility_timeout.)
                 count = 0
                 while True:
                     reassert = (count >= visibility_timeout_reassert)
-                    for i, task in enumerate((local.task_active, local.task_push)):
+                    for i, task in enumerate((local.task_render, local.task_upload)):
                         if task:
                             name = task_names[i]
                             if task.proc is not None:
@@ -220,36 +213,36 @@ def run_tasks(opts, args, conf):
 
                                     # did process finish with errors?
                                     if task.retcode != 0:
-                                        if name == 'active':
+                                        if name == 'render':
                                             errtxt = "Render task \"{} #{}\" exited with status code {}".format(
                                             task.script_name, task.id, task.retcode)
                                             raise error.ValueErrorRetry(errtxt)
                                         else:
-                                            errtxt = "Upload task #{} exited with status code {}".format(task.id, task.retcode)
+                                            errtxt = "Upload task #{} exited with status code {}".format(
+                                            task.id, task.retcode)
                                             raise ValueError(errtxt)
 
-                                    # Process finished successfully.  If S3-push process,
+                                    # Process finished successfully.  If upload process,
                                     # tell SQS that the task completed successfully.
-                                    if name == 'push':
+                                    if name == 'upload':
                                         logging.info('Finished upload task #%d', task.id)
                                         q.delete_message(task.msg)
                                         task.msg = None
                                         local.task_count += 1
                                         task_complete_accounting(local.task_count)
  
-                                    # active task completed?
-                                    if name == 'active':
-                                        logging.info('Finished render task: %s #%d', task.script_name,task.id)
+                                    # Render task completed?
+                                    if name == 'render':
+                                        logging.info('Finished render task \"%s #%d\"', task.script_name,task.id)
 
                             # tell SQS that we are still working on the task
                             if reassert and task.proc is not None:
-                                log_task_name = name.replace('push', 'upload').replace('active', 'render')
-                                logging.debug('Reasserting %s task %d with SQS', log_task_name, task.id)
+                                logging.debug('Reasserting %s task %d with SQS', name, task.id)
                                 task.msg.change_visibility(visibility_timeout)
 
                     # break out of loop only when no pending tasks remain
-                    if ((not local.task_active or local.task_active.proc is None)
-                        and (not local.task_push or local.task_push.proc is None)):
+                    if ((not local.task_render or local.task_render.proc is None)
+                        and (not local.task_upload or local.task_upload.proc is None)):
                         break
 
                     # setup for next process poll iteration
@@ -258,19 +251,18 @@ def run_tasks(opts, args, conf):
                     time.sleep(1)
                     count += 1
 
-                # clean up the S3-push task
-                cleanup(local.task_push, 'push')
-                local.task_push = None
+                # clean up the upload task
+                cleanup(local.task_upload, 'upload')
+                local.task_upload = None
 
-                # start a concurrent push task to commit files generated by
-                # just-completed active task (such as render frames) to S3
-                if local.task_active:
-                    local.task_active.proc = start_s3_push_process(opts, args, conf, local.task_active.outdir)
-                    local.task_push = local.task_active
-                    local.task_active = None
+                # start a concurrent upload task to commit files generated by just-completed render task to S3
+                if local.task_render:
+                    local.task_render.proc = start_upload_process(opts, args, conf, local.task_render.outdir)
+                    local.task_upload = local.task_render
+                    local.task_render = None
 
-                # if no active task and no S3-push task, we are done (unless DONE is set to "poll")
-                if not local.task_active and not local.task_push:
+                # if no render or upload task, we are done (unless DONE is set to "poll")
+                if not local.task_render and not local.task_upload:
                     if read_done_file() == "poll":
                         logging.info('Waiting for tasks...')
                         time.sleep(15)
@@ -281,11 +273,11 @@ def run_tasks(opts, args, conf):
         finally:
             cleanup_all()
 
-    # initialize task_active and task_push states
-    task_names = ('active', 'push')
+    # initialize task_render and task_upload states
+    task_names = ('render', 'upload')
     local = State()
-    local.task_active = None
-    local.task_push = None
+    local.task_render = None
+    local.task_upload = None
     local.task_id_counter = 0
     local.task_count = 0
 
