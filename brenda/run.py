@@ -162,7 +162,7 @@ def startup_script(opts, conf):
         "S3_REGION",
         'WORK_QUEUE',
         'WORK_DIR',
-        'RENDER_OUTPUT',
+        'OUTPUT_URL',
         ]
     optional_keys = [
         "LOG_LEVEL",

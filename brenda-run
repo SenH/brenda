@@ -40,10 +40,8 @@ Commands:
   init   : do one-time initialization by creating SSH keys and Security Group.
   reset  : undo the effects of "init" by deleting SSH keys and Security Group.
 Required config vars:
-  WORK_QUEUE : name of SQS queue (e.g. sqs://QUEUE) containing render
-               work.
-  RENDER_OUTPUT : render farm will save render output to this S3 bucket/prefix,
-                  e.g. s3://BUCKET or s3://BUCKET/PREFIX
+  WORK_QUEUE : name of SQS queue (e.g. sqs://QUEUE) containing render work.
+  OUTPUT_URL : save render output to this S3 URL (e.g. s3://BUCKET or s3://BUCKET/PREFIX)
   AMI_ID : Amazon ID of AMI that will be started.  This should be an AMI
            that already has Brenda pre-installed.
 Optional config vars:

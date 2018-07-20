@@ -28,10 +28,8 @@ Synopsis:
   Render farm node worker that executes render tasks
   from the work queue, and saves the render output in an S3 bucket. 
 Required config vars:
-  WORK_QUEUE : name of SQS queue (e.g. sqs://QUEUE) containing render
-               work.
-  RENDER_OUTPUT : render farm will save render output to this S3 bucket/prefix,
-                  e.g. s3://BUCKET or s3://BUCKET/PREFIX
+  WORK_QUEUE : name of SQS queue (e.g. sqs://QUEUE) containing render work.
+  OUTPUT_URL : save render output to this S3 URL (e.g. s3://BUCKET or s3://BUCKET/PREFIX)
 Optional config vars:
   S3_REGION  : S3 region name, defaults to US standard.
   SQS_REGION : SQS region name, defaults to US standard.

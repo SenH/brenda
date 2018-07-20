@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -eu
 
-export RENDER_OUTPUT="s3://sh-brenda"
+export OUTPUT_URL="s3://sh-brenda"
 declare -r LS_FILE="s3-ls.txt"
 
 # Check S3 output
-aws s3 ls "$RENDER_OUTPUT" > "$LS_FILE"
+aws s3 ls "$OUTPUT_URL" > "$LS_FILE"
 cat "$LS_FILE"
 wc "$LS_FILE"
 rm "$LS_FILE"

@@ -68,12 +68,12 @@ def format_s3_url(bucktup, s3name):
     return "s3://%s/%s%s" % (bucktup[1][0], bucktup[1][1], s3name)
 
 def get_s3_output_bucket_name(conf):
-    bn = conf.get('RENDER_OUTPUT')
+    bn = conf.get('OUTPUT_URL')
     if not bn:
-        raise ValueError("RENDER_OUTPUT not defined in configuration")
+        raise ValueError("OUTPUT_URL not defined in configuration")
     bn = parse_s3_url(bn)
     if not bn:
-        raise ValueError("RENDER_OUTPUT must be an s3:// URL")
+        raise ValueError("OUTPUT_URL must be an s3:// URL")
     if len(bn) == 1:
         bn.append('')
     elif len(bn) == 2 and bn[1] and bn[1][-1] != '/':

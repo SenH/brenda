@@ -10,7 +10,7 @@ declare -r SCRIPTDIR=$(dirname "$SCRIPTPATH")
 declare -r ROOT="$(realpath "$SCRIPTDIR/../..")"
 
 declare -r WORK_DIR="${TMPDIR}brenda-work"
-export RENDER_OUTPUT="s3://sh-brenda"
+export OUTPUT_URL="s3://sh-brenda"
 export BRENDA_CONFIG="$ROOT/test/brenda.conf"
 
 # Setup work dir
@@ -19,7 +19,7 @@ mkdir -pv "$WORK_DIR"
 cp -av "$ROOT/test/tasks/"*".py" "$WORK_DIR"
 
 # Setup render output
-aws s3 rm "$RENDER_OUTPUT" --recursive
+aws s3 rm "$OUTPUT_URL" --recursive
 
 # Run Brenda
 "$ROOT/brenda-work" reset

@@ -290,7 +290,7 @@ def run_tasks(opts, args, conf):
     visibility_timeout_reassert = int(conf.get('VISIBILITY_TIMEOUT_REASSERT', '30'))
     visibility_timeout = int(conf.get('VISIBILITY_TIMEOUT', '120'))
 
-    # validate RENDER_OUTPUT bucket
+    # validate OUTPUT_URL
     aws.get_s3_output_bucket(conf)
 
     # file cleanup
