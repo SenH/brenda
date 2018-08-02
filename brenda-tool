@@ -48,11 +48,10 @@ Optional config vars:
   EC2_REGION : EC2 region name, defaults to US standard (optional).
   CREDENTIAL_PROFILE : Profile name to retrieve credentials from
 
-  AMI_USER : username when accessing EC2 node (optional).
+  AMI_USER : username for accessing instance.
   TOOL_THREADS : max number of simultaneous threads to use when querying
                  multiple render farm instances (default=64).
-  REMOTE_PIDFILE : pid file name used on remote render farm nodes
-                   (default="brenda.pid").
+  REMOTE_PIDFILE : Filename with the process id used on the instance (default="brenda.pid").
 Examples:
   Copy Brenda configuration file to all running instances:
     $ brenda-tool rsync ~/.brenda.conf HOST:
@@ -84,7 +83,7 @@ Examples:
                       help="Level of events to log (default: INFO)")
 
     parser.add_option("-u", "--user", dest="user",
-                      help="Username to use when logging into remote EC2 nodes, overrides environmental variable AMI_USER")
+                      help="Username for accessing instance, overrides environmental variable AMI_USER")
     parser.add_option("-n", "--host", dest="host",
                       help="ssh/rsync on specific host")
     parser.add_option("-H", "--hosts-file", dest="hosts_file", metavar="FILE",
