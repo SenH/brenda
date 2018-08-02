@@ -74,8 +74,7 @@ def run_cmd_list(opts, conf, cmd_seq, show_output, capture_stderr):
     ret = []
     q = Queue.Queue()
     for task in cmd_seq:
-        #if opts.verbose:
-        #    print task
+        logging.debug(task)
         q.put(task)
 
     lock = threading.Lock()
